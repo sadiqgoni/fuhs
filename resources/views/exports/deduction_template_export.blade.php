@@ -1,0 +1,39 @@
+<table>
+    <thead>
+    <tr>
+        <th>id</th>
+        <th>salary_structure_id</th>
+        <th>grade_level_from</th>
+        <th>grade_level_to</th>
+        <th>deduction_id</th>
+        <th>deduction_type</th>
+        <th>value</th>
+        <th>created_at</th>
+        <th>updated_at</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach($deductions as $deduction)
+        <tr>
+            <td>{{$deduction->id}}</td>
+            <td>{{$deduction->salary_structure_id}}</td>
+            <td>{{$deduction->grade_level_from}}</td>
+            <td>{{$deduction->grade_level_to}}</td>
+            <td>{{$deduction->deduction_id}}</td>
+            <td>{{$deduction->deduction_type}}</td>
+            <td>{{$deduction->value}}</td>
+            <td>{{$deduction->created_at}}</td>
+            <td>{{$deduction->updated_at}}</td>
+        </tr>
+    @endforeach
+    </tbody>
+</table>
+{{--'id'=>$row['id'],--}}
+{{--'salary_structure_id'=>$row['salary_structure_id'],--}}
+{{--'grade_level_from'=>$row['grade_level_from'],--}}
+{{--'grade_level_to'=>$row['grade_level_to'],--}}
+{{--'deduction_id'=>$row['deduction_id'],--}}
+{{--'deduction_type'=>$row['deduction_type'],--}}
+{{--'value'=>$row['value'],--}}
+{{--'created_at'=>$row['created_at'],--}}
+{{--'updated_at'=>$row['updated_at'],--}}

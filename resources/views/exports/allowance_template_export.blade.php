@@ -1,0 +1,39 @@
+<table>
+    <thead>
+    <tr>
+        <th>id</th>
+        <th>salary_structure_id</th>
+        <th>grade_level_from</th>
+        <th>grade_level_to</th>
+        <th>allowance_id</th>
+        <th>allowance_type</th>
+        <th>value</th>
+        <th>created_at</th>
+        <th>updated_at</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach($allowances as $allowance)
+        <tr>
+            <td>{{$allowance->id}}</td>
+            <td>{{$allowance->salary_structure_id}}</td>
+            <td>{{$allowance->grade_level_from}}</td>
+            <td>{{$allowance->grade_level_to}}</td>
+            <td>{{$allowance->allowance_id}}</td>
+            <td>{{$allowance->allowance_type}}</td>
+            <td>{{$allowance->value}}</td>
+            <td>{{$allowance->created_at}}</td>
+            <td>{{$allowance->updated_at}}</td>
+        </tr>
+    @endforeach
+    </tbody>
+</table>
+{{--'id'=>$row['id'],--}}
+{{--'salary_structure_id'=>$row['salary_structure_id'],--}}
+{{--'grade_level_from'=>$row['grade_level_from'],--}}
+{{--'grade_level_to'=>$row['grade_level_to'],--}}
+{{--'allowance_id'=>$row['allowance_id'],--}}
+{{--'allowance_type'=>$row['allowance_type'],--}}
+{{--'value'=>$row['value'],--}}
+{{--'created_at'=>$row['created_at'],--}}
+{{--'updated_at'=>$row['updated_at'],--}}

@@ -1,0 +1,34 @@
+<table>
+    <thead>
+    <tr>
+        <th>id</th>
+        <th>employee_id</th>
+        <th>start_month</th>
+        <th>no_of_installment</th>
+        <th>amount_paid</th>
+        <th>pay_month_year</th>
+        <th>ded_countdown</th>
+        <th>created_at</th>
+        <th>CreatedBy</th>
+        <th>updated_at</th>
+        <th>ModifiedBy</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach($deductions as $deduction)
+        <tr>
+            <td>{{$deduction->id}}</td>
+            <td>{{$deduction->employee_id}}</td>
+            <td>{{$deduction->start_month}}</td>
+            <td>{{$deduction->no_of_installment}}</td>
+            <td>{{$deduction->amount_paid}}</td>
+            <td>{{$deduction->pay_month_year}}</td>
+            <td>{{$deduction->ded_countdown}}</td>
+            <td>{{$deduction->created_at}}</td>
+            <td>{{$deduction->CreatedBy}}</td>
+            <td>{{$deduction->updated_at}}</td>
+            <td>{{$deduction->ModifiedBy}}</td>
+        </tr>
+    @endforeach
+    </tbody>
+</table>
