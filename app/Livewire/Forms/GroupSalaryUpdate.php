@@ -109,11 +109,8 @@ class GroupSalaryUpdate extends Component
                 if ($this->update_allow_deduct==2 && $this->selected_allow_deduct==1 && $this->paye_calculation !=1){
 
                     $paye=app(DeductionCalculation::class);
-                    if ($this->paye_calculation == 2){
-                        $this->amount=$paye->paye_calculation1($salary_update->basic_salary,$this->statutory_deduction);
-                    }elseif ($this->paye_calculation==3){
-                        $this->amount=$paye->paye_calculation2($salary_update->basic_salary,$this->statutory_deduction);
-                    }
+                    // Use dynamic tax calculation system
+                    $this->amount = $paye->compute_tax($salary_update->basic_salary);
                     $salary_update["D$this->selected_allow_deduct"] = $this->amount;
                     $salary_update->save();
                 }
@@ -276,13 +273,10 @@ class GroupSalaryUpdate extends Component
                   $salary_update->save();
               }else{
                   //deductions
-                  if ($this->selected_allow_deduct==1 && ($this->paye_calculation ==2 || $this->paye_calculation ==3)){
+                  if ($this->selected_allow_deduct==1){
                       $paye=app(DeductionCalculation::class);
-                      if ($this->paye_calculation == 2){
-                          $this->amount=$paye->paye_calculation1($salary_update->basic_salary,app_settings()->statutory_deduction);
-                      }elseif ($this->paye_calculation==3){
-                          $this->amount=$paye->paye_calculation2($salary_update->basic_salary,app_settings()->statutory_deduction);
-                      }
+                      // Use dynamic tax calculation system
+                      $this->amount = $paye->compute_tax($salary_update->basic_salary);
                   }
                   elseif(($this->selected_allow_deduct==2 || $this->selected_allow_deduct==3)){
 

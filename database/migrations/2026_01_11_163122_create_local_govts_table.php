@@ -10,10 +10,14 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        if (!Schema::hasTable('faqs')) {
-            Schema::create('faqs', function (Blueprint $table) {
+        if (!Schema::hasTable('local_govts')) {
+            Schema::create('local_govts', function (Blueprint $table) {
                 $table->id();
+                $table->string('name');
+                $table->unsignedBigInteger('state_id');
+                $table->tinyInteger('status')->default(1);
                 $table->timestamps();
+                $table->foreign('state_id')->references('id')->on('states')->onDelete('cascade');
             });
         }
     }
@@ -23,6 +27,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('faqs');
+        Schema::dropIfExists('local_govts');
     }
 };

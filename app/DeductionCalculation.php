@@ -177,63 +177,140 @@ class DeductionCalculation
 
     }
 
-    public function compute_tax($taxable_income)
+    public function compute_tax($basic_salary)
     {
-        $tax_inc=$taxable_income;
-        $balance=$tax_inc;
-        $tax=0;
-        $total_paye_per_month=0;
-        if ($balance > 300000)
-        {
-            $tax=number_format($tax +(7/100) * 300000,2,'.','');
-            $balance=number_format($balance - 300000,2,'.','');
-        }
-        else{
-            $tax = number_format($tax + (7/100) * 300000,2,'.','');
-            $total_paye_per_month=number_format($tax / 12,2,'.','');
-        }
-        if ($balance > 300000)
-        {
-            $tax = number_format($tax + (11/100) * 300000,2,'.','');
-            $balance=number_format($balance - 300000,2,'.','');
-        }
-        else{
-            $tax=number_format($tax + (11/100) * $balance,2,'.','');
-            $total_paye_per_month=number_format($tax/12,2,'.','');
-        }
-        if($balance > 500000)
-        {
-            $tax = number_format($tax + (15/100) * 500000,2,'.','');
-            $balance = number_format($balance - 500000,2,'.','');
-        }
-        else{
-            $tax = number_format($tax + (15/100) * $balance,2,'.','');
-            $total_paye_per_month= number_format($tax/12,2,'.','');
+        // Try to use dynamic tax bracket first
+        try {
+            $activeBracket = \App\Models\TaxBracket::active()->first();
+
+            if ($activeBracket && $activeBracket->tax_brackets) {
+                // Replicate the full calculation logic from paye_calculation1 but use dynamic brackets
+
+                // Get taxable allowances (same as old system)
+                $allowances = \App\Models\Allowance::leftJoin('salary_allowance_templates', 'salary_allowance_templates.allowance_id', 'allowances.id')
+                    ->select('salary_allowance_templates.*', 'allowances.taxable', 'allowances.status')
+                    ->where('taxable', 1)
+                    ->where('status', 1)
+                    ->get();
+
+                $total_allow = 0;
+                foreach ($allowances as $allowance) {
+                    try {
+                        if ($allowance->allowance_type == 1) {
+                            $amount = round($basic_salary / 100 * $allowance->value, 2);
+                        } else {
+                            $amount = $allowance->value;
+                        }
+                        $total_allow += round($amount, 2);
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+
+                // Calculate annual figures
+                $annual_basic = round($basic_salary * 12, 2);
+                $annual_allowance = round($total_allow * 12, 2);
+                $annual_gross = round($annual_basic + $annual_allowance, 2);
+
+                // Calculate reliefs using dynamic bracket reliefs
+                $total_relief = 0;
+                if ($activeBracket->reliefs) {
+                    foreach ($activeBracket->reliefs as $key => $relief) {
+                        if (isset($relief['fixed'])) {
+                            $total_relief += $relief['fixed'];
+                        } elseif (isset($relief['percentage'])) {
+                            $base = $relief['base'] ?? 'basic';
+                            if ($base == 'basic_housing_transport') {
+                                // For pension: basic + housing + transport
+                                // We don't have housing/transport here, so approximate with basic + allowances
+                                $base_amount = $annual_basic + $annual_allowance;
+                            } else {
+                                $base_amount = $annual_basic;
+                            }
+                            $amount = ($relief['percentage'] / 100) * $base_amount;
+                            $total_relief += round($amount, 2);
+                        }
+                    }
+                } else {
+                    // Fallback to old system reliefs
+                    $agp = round((20/100) * $annual_gross, 2);
+                    $consolidated_relief = 200000.00 + $agp;
+                    $pension = round((8/100) * $annual_basic, 2);
+                    $nhf = round((2.5/100) * $annual_basic, 2);
+                    $nhis = round((0.5/100) * $annual_basic, 2);
+                    $total_relief = round($consolidated_relief + $pension + $nhf + $nhis, 2);
+                }
+
+                // Calculate taxable income
+                $taxable_income = round($annual_gross - $total_relief, 2);
+                $taxable_income = max(0, $taxable_income); // Ensure not negative
+
+                // Apply dynamic tax brackets
+                $annual_tax = $activeBracket->calculateTax($taxable_income);
+                return round($annual_tax / 12, 2);
+            }
+        } catch (\Exception $e) {
+            // Log error but continue with fallback
+            \Illuminate\Support\Facades\Log::error('Dynamic tax calculation failed: ' . $e->getMessage());
         }
 
-        if($balance > 500000)
-        {
-            $tax = number_format($tax + (19/100) * 500000,2,'.','');
-            $balance = number_format($balance - 500000,2,'.','');
-        }
-        else{
-            $tax = number_format($tax + (19/100) * $balance,2,'.','');
-            $total_paye_per_month= number_format($tax/12,2,'.','');
+        // Fallback to old hardcoded method if no active bracket or error
+        return $this->paye_calculation1($basic_salary, 1);
+    }
+
+    /**
+     * Legacy tax calculation method (old hardcoded brackets)
+     * Used as fallback when no dynamic bracket is available
+     */
+    public function compute_tax_legacy($taxable_income)
+    {
+        $tax_inc = $taxable_income;
+        $balance = $tax_inc;
+        $tax = 0;
+
+        // OLD BRACKETS (pre-2026)
+        if ($balance > 300000) {
+            $tax = number_format($tax + (7/100) * 300000, 2, '.', '');
+            $balance = number_format($balance - 300000, 2, '.', '');
+        } else {
+            $tax = number_format($tax + (7/100) * $balance, 2, '.', '');
+            return round($tax / 12, 2);
         }
 
-        if($balance > 1600000)
-        {
-            $tax = number_format($tax + (21/100) * 1600000,2,'.','');
-            $balance = number_format($balance - 1600000,2,'.','');
+        if ($balance > 300000) {
+            $tax = number_format($tax + (11/100) * 300000, 2, '.', '');
+            $balance = number_format($balance - 300000, 2, '.', '');
+        } else {
+            $tax = number_format($tax + (11/100) * $balance, 2, '.', '');
+            return round($tax / 12, 2);
         }
-        else{
-            $tax = number_format($tax + (21/100) * $balance,2,'.','');
-            $total_paye_per_month= number_format($tax/12,2,'.','');
+
+        if ($balance > 500000) {
+            $tax = number_format($tax + (15/100) * 500000, 2, '.', '');
+            $balance = number_format($balance - 500000, 2, '.', '');
+        } else {
+            $tax = number_format($tax + (15/100) * $balance, 2, '.', '');
+            return round($tax / 12, 2);
         }
-        $tax=$tax + (24/100) * $balance;
-        $total_paye_per_month=round($tax/12,2);
-//        dd($total_paye_per_month);
-        return $total_paye_per_month;
+
+        if ($balance > 500000) {
+            $tax = number_format($tax + (19/100) * 500000, 2, '.', '');
+            $balance = number_format($balance - 500000, 2, '.', '');
+        } else {
+            $tax = number_format($tax + (19/100) * $balance, 2, '.', '');
+            return round($tax / 12, 2);
+        }
+
+        if ($balance > 1600000) {
+            $tax = number_format($tax + (21/100) * 1600000, 2, '.', '');
+            $balance = number_format($balance - 1600000, 2, '.', '');
+        } else {
+            $tax = number_format($tax + (21/100) * $balance, 2, '.', '');
+            return round($tax / 12, 2);
+        }
+
+        $tax = $tax + (24/100) * $balance;
+        return round($tax / 12, 2);
     }
     public function total_deduction($total)
     {

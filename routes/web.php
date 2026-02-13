@@ -31,6 +31,8 @@ use App\Livewire\Forms\Tribe;
 use App\Livewire\Forms\Relationship;
 use App\Livewire\Forms\StaffCategory;
 use App\Livewire\Forms\EmployeeType;
+use App\Livewire\Forms\State;
+use App\Livewire\Forms\LocalGovt;
 use App\Livewire\Pages\LoanDeductionHistory;
 use App\Livewire\Forms\AppSetting;
 use App\Livewire\Forms\Restore;
@@ -46,6 +48,7 @@ use App\Livewire\Forms\DeductionTemplate;
 use App\Livewire\Forms\AdminUser;
 use App\Livewire\Pages\BackupHistory;
 use App\Livewire\Pages\RestorHistory;
+use App\Http\Controllers\TaxBracketController;
 use App\Http\Controllers\Report\ChartController;
 use App\Livewire\Pages\Chart as staff_chart;
 use App\Http\Controllers\Auth\StaffAuth;
@@ -122,6 +125,8 @@ Route::middleware(['auth','is_admin','passkey','2fa'])->group(function (){
         Route::get('relationship',Relationship::class)->name('relationship');
         Route::get('employee/type',EmployeeType::class)->name('employee.type');
         Route::get('staff/category',StaffCategory::class)->name('staff.category');
+        Route::get('state',State::class)->name('state');
+        Route::get('local/govt',LocalGovt::class)->name('local.govt');
         Route::get('employee/profile',EmployeeProfile::class)->name('employee.profile');
     });
     Route::get('/dashboard',[DashboardController::class,'dashboard'])->name('dashboard');
@@ -208,3 +213,18 @@ Route::get('storage', function () {
 
 });
 Route::post('/save-dom-file', [ReportController::class, 'saveDomFile']);
+
+// Tax Bracket Management Routes (Admin Only)
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+    Route::resource('tax-brackets', TaxBracketController::class)->names([
+        'index' => 'tax-brackets.index',
+        'create' => 'tax-brackets.create',
+        'store' => 'tax-brackets.store',
+        'show' => 'tax-brackets.show',
+        'edit' => 'tax-brackets.edit',
+        'update' => 'tax-brackets.update',
+        'destroy' => 'tax-brackets.destroy',
+    ]);
+    Route::post('tax-brackets/{taxBracket}/activate', [TaxBracketController::class, 'activate'])->name('tax-brackets.activate');
+    Route::get('tax-brackets/{taxBracket}/test', [TaxBracketController::class, 'test'])->name('tax-brackets.test');
+});

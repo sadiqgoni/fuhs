@@ -31,8 +31,29 @@ class SalaryLedgerPosting extends Component
     ];
     public function mount()
     {
-//        $this->year=date('Y');
-//        $this->description=date('F Y')." Salary";
+        $this->year = date('Y');
+        $this->month = date('F');
+        $this->generateDescription();
+    }
+
+    public function generateDescription()
+    {
+        if ($this->month || $this->year) {
+            $institutionName = strtoupper(app_settings()->name ?? 'INSTITUTION');
+            $month = $this->month ?: date('F');
+            $year = $this->year ?: date('Y');
+            $this->description = $institutionName . ' SALARY ' . strtoupper($month) . ' ' . $year;
+        }
+    }
+
+    public function updatedMonth()
+    {
+        $this->generateDescription();
+    }
+
+    public function updatedYear()
+    {
+        $this->generateDescription();
     }
     public function store()
     {
@@ -229,6 +250,13 @@ class SalaryLedgerPosting extends Component
     }
     public function render()
     {
-        return view('livewire.forms.salary-ledger-posting')->extends('components.layouts.app');
+        $recentSalaries = SalaryHistory::select('salary_month', 'salary_year', DB::raw('COUNT(*) as staff_count'))
+            ->groupBy('salary_month', 'salary_year')
+            ->orderBy('salary_year', 'desc')
+            ->orderBy('salary_month', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('livewire.forms.salary-ledger-posting', compact('recentSalaries'))->extends('components.layouts.app');
     }
 }

@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class StaffPromotion extends Model
 {
     use HasFactory;
-    protected $fillable=[
+    protected $fillable = [
         'payroll_number',
         'salary_structure',
         'level',
         'step',
-        'status'
+        'status',
+        'arrears_months'
     ];
 }

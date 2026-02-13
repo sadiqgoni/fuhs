@@ -115,7 +115,14 @@
                                 <td>{{$post->bank_code}}</td>
                                 <td>{{$post->bank_name}}</td>
                                 <td>{{$post->bank_branch}}</td>
-                                <td>{{status($post->status)}}
+                                <td>
+                                    @if($post->status==1)
+                                        <span class="badge badge-success">Active</span>
+                                        <button class="float-right btn btn-sm btn-warning" wire:click.prevent="status_change({{$post->id}})">Discontinue</button>
+                                    @else
+                                        <span class="badge badge-danger">Discontinued</span>
+                                        <button class="float-right btn btn-sm btn-success" wire:click.prevent="status_change({{$post->id}})">Activate</button>
+                                    @endif
                                 </td>
                                 <td><button class="btn btn-sm btn-info" wire:click.prevent="edit_record({{$post->id}})">Edit</button></td>
                             </tr>

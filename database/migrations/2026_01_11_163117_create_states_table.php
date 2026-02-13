@@ -10,9 +10,12 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        if (!Schema::hasTable('faqs')) {
-            Schema::create('faqs', function (Blueprint $table) {
+        if (!Schema::hasTable('states')) {
+            Schema::create('states', function (Blueprint $table) {
                 $table->id();
+                $table->string('name');
+                $table->integer('country')->default(1); // Default Nigeria
+                $table->tinyInteger('status')->default(1);
                 $table->timestamps();
             });
         }
@@ -23,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('faqs');
+        Schema::dropIfExists('states');
     }
 };

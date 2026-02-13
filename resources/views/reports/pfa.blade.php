@@ -113,23 +113,20 @@ $g_total=0;
             $total=0
 
             @endphp
+            {{-- PFA Payment Schedule should only show employer pension contribution (D2) --}}
+            @if($report->D2 != 0 && $report->D2 != '00')
             <tr>
                 <td>{{$counter}}</td>
                 <td>{{$report->ip_number}}</td>
                 <td>{{$report->full_name}}</td>
                 <td>{{$report->pension_pin}}</td>
                 <td>
-                    @foreach($deductions as $deduction)
-                        {{--                {{dd($report["D$deduction->id"])}}--}}
-                        @php
-                            $total+=$report["D$deduction->id"]
-                        @endphp
-                    @endforeach
-                    {{number_format($total,2)}}
-
+                    {{-- PFA Payment Schedule should only show employer pension contribution (D2) --}}
+                    {{number_format($report->D2, 2)}}
                 </td>
             </tr>
-            @php $counter++;$g_total+=$total @endphp
+            @php $counter++;$g_total+=$report->D2 @endphp
+            @endif
 
 
         @empty
