@@ -21,6 +21,8 @@
                     <table class="table table-striped table-bordered table-list table-sm" style="font-size: 12px"  >
                         @php
                             $counter=1;
+                            $allowances = \App\Models\Allowance::where('status', 1)->get();
+                            $deductions = \App\Models\Deduction::where('status', 1)->get();
                         @endphp
 
 {{--                        @forelse($payrolls as $key=>$payroll)--}}
@@ -40,17 +42,23 @@
                                 <th>Staff Id <br>Name</th>
                                 <th>Payroll Id<br/>Cons</th>
                                 <th>Basic Sal<br/>Salary Arr</th>
-                                <th>Resp Allow <br/>Haz Allow </th>
-                                <th>NM Haz Allow <br/>C duty Allow</th>
-                                <th>Spec Allow <br/> Teach Allow</th>
-                                <th>Shift Allow  <br/> Other Allow1</th>
-                                <th>Other Allow2</th>
-                                <th>Paye<br/> Pension</th>
-                                <th>NHF<br/> Union 1 Dd</th>
-                                <th>SAL DED<br/> FUHSNICS</th>
-                                <th>ANUPA<br/> Page Loans </th>
-                                <th>Other Ded1 <br/>Other Ded2</th>
-                                <th>Union 2 Dd </th>
+                                
+                                @foreach($allowances->chunk(2) as $chunk)
+                                    <th>
+                                        @foreach($chunk as $allowance)
+                                            {{ $allowance->allowance_name }} @if(!$loop->last) <br/> @endif
+                                        @endforeach
+                                    </th>
+                                @endforeach
+
+                                @foreach($deductions->chunk(2) as $chunk)
+                                    <th>
+                                        @foreach($chunk as $deduction)
+                                            {{ $deduction->deduction_name }} @if(!$loop->last) <br/> @endif
+                                        @endforeach
+                                    </th>
+                                @endforeach
+
                                 <th>Bank Name <br/> Acc No</th>
                                 <th>Gross <br/> Total Ded</th>
                                 <th>Netpay</th>
@@ -72,17 +80,23 @@
                                     <td>{{$report->ip_number}}<br>grade{{$report->grade_level."/".$report->step}}</td>
 
                                     <td>{{number_format($report->basic_salary,2)}} <br> {{number_format($report->salary_areas,2)}}</td>
-                                    <td>{{number_format($report->A1,2)}} <br> {{number_format($report->A2,2)}}</td>
-                                    <td>{{number_format($report->A3,2)}} <br> {{number_format($report->A4,2)}}</td>
-                                    <td>{{number_format($report->A5,2)}} <br> {{number_format($report->A6,2)}}</td>
-                                    <td>{{number_format($report->A7,2)}} <br> {{number_format($report->A8,2)}}</td>
-                                    <td>{{number_format($report->A9,2)}}</td>
-                                    <td>{{number_format($report->D1,2)}} <br> {{number_format($report->D2,2)}}</td>
-                                    <td>{{number_format($report->D3,2)}} <br> {{number_format($report->D4,2)}}</td>
-                                    <td>{{number_format($report->D5,2)}} <br> {{number_format($report->D6,2)}}</td>
-                                    <td>{{number_format($report->D7,2)}} <br> {{number_format($report->D8,2)}}</td>
-                                    <td>{{number_format($report->D9,2)}} <br> {{number_format($report->D10,2)}}</td>
-                                    <td>{{number_format($report->D11,2)}}</td>
+                                    
+                                    @foreach($allowances->chunk(2) as $chunk)
+                                        <td>
+                                            @foreach($chunk as $allowance)
+                                                {{ number_format($report->{'A'.$allowance->id}, 2) }} @if(!$loop->last) <br/> @endif
+                                            @endforeach
+                                        </td>
+                                    @endforeach
+
+                                    @foreach($deductions->chunk(2) as $chunk)
+                                        <td>
+                                            @foreach($chunk as $deduction)
+                                                {{ number_format($report->{'D'.$deduction->id}, 2) }} @if(!$loop->last) <br/> @endif
+                                            @endforeach
+                                        </td>
+                                    @endforeach
+
                                     <td> {{$report->bank_name}} <br>{{$report->account_number}}</td>
                                     <td>{{number_format($report->gross_pay,2)}}<br/>{{number_format($report->total_deduction,2)}}</td>
                                     <td>{{number_format($report->net_pay,2)}}</td>

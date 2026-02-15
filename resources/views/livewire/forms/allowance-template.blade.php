@@ -1,11 +1,11 @@
 <div>
     {{-- The best athlete wants his opponent at his best. --}}
     <style>
-        svg{
+        svg {
             display: none;
         }
     </style>
-    @if($record==true)
+    @if($record == true)
         <div class="">
             <div class="text-right">
                 <select name="" wire:model.live="filter_allow" id="" class="form-control-sm float-left">
@@ -20,73 +20,80 @@
                     <option value="50">50</option>
                     <option value="100">100</option>
                 </select>
-                    @can('can_save')
+                @can('can_save')
                     <button class="btn mt-2 create" wire:click.prevent="create_allowance()">Add</button>
-                    @endcan
+                @endcan
 
             </div>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered mt-2">
                     <thead>
-                    <tr class="text-uppercase">
-                        <th>SN</th>
-                        <th>Salary Structure</th>
-                        <th>Grade Level From</th>
-                        <th>Grade Level To</th>
-                        <th>Allowance</th>
-                        <th>Allowance Type</th>
+                        <tr class="text-uppercase">
+                            <th>SN</th>
+                            <th>Salary Structure</th>
+                            <th>Grade Level From</th>
+                            <th>Grade Level To</th>
+                            <th>Allowance</th>
+                            <th>Allowance Type</th>
 
-                        <th>Value</th>
-                        <th>Action</th>
-                    </tr>
+                            <th>Value</th>
+                            <th>Action</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @forelse($allowances as $allowance)
-                        <tr>
-                            <th>{{($allowances->currentpage() -1 ) * $allowances->perPage() + $loop->iteration}}</th>
-                            <td>{{ss($allowance->salary_structure_id)}}</td>
-                            <td>{{$allowance->grade_level_from}}</td>
-                            <td>{{$allowance->grade_level_to}}</td>
-                            <td>{{allowance_name($allowance->allowance_id)}}</td>
-                            <td>{{allowance_type($allowance->allowance_type)}}</td>
+                        @forelse($allowances as $allowance)
+                            <tr>
+                                <th>{{($allowances->currentpage() - 1) * $allowances->perPage() + $loop->iteration}}</th>
+                                <td>{{ss($allowance->salary_structure_id)}}</td>
+                                <td>{{$allowance->grade_level_from}}</td>
+                                <td>{{$allowance->grade_level_to}}</td>
+                                <td>{{allowance_name($allowance->allowance_id)}}</td>
+                                <td>{{allowance_type($allowance->allowance_type)}}</td>
 
 
-                            <td>@if($allowance->allowance_type==1)
+                                <td>@if($allowance->allowance_type == 1)
                                     {{$allowance->value}}%
                                 @else
-                                    {{number_format($allowance->value,2)}}
-                                @endif</td>
-                            <td>
-                              @can('can_edit')
-                                    <button class="btn edit_btn" wire:click.prevent="edit_allowance({{$allowance->id}})" style="width:fit-content !important;padding: 5px !important;">Edit</button>
-                                    <button class="btn btn-sm btn-danger" wire:click.prevent="deleteId({{$allowance->id}})" style="width:fit-content !important;padding: 5px !important;">Delete</button>
-                                @endcan
-                            </td>
+                                        {{number_format($allowance->value, 2)}}
+                                    @endif
+                                </td>
+                                <td>
+                                    @can('can_edit')
+                                        <button class="btn edit_btn" wire:click.prevent="edit_allowance({{$allowance->id}})"
+                                            style="width:fit-content !important;padding: 5px !important;">Edit</button>
+                                        <button class="btn btn-sm btn-danger" wire:click.prevent="deleteId({{$allowance->id}})"
+                                            style="width:fit-content !important;padding: 5px !important;">Delete</button>
+                                    @endcan
+                                </td>
 
-                        </tr>
-                    @empty
-                        no record
-                    @endforelse
+                            </tr>
+                        @empty
+                            no record
+                        @endforelse
                     </tbody>
                     <tfoot>
-                    <tr>
-                        <td colspan="5">{{$allowances->links()}}</td>
-                    </tr>
+                        <tr>
+                            <td colspan="5">{{$allowances->links()}}</td>
+                        </tr>
                     </tfoot>
                 </table>
             </div>
         </div>
     @endif
-    @if($edit==true)
+    @if($edit == true)
         @can('can_edit')
             <div>
                 <form wire:submit.prevent="update({{$ids}})">
                     <fieldset>
-                        <legend><h6>Update Allowance Template</h6></legend>
+                        <legend>
+                            <h6>Update Allowance Template</h6>
+                        </legend>
                         <div class="row">
                             <div class="col-12 col-md-4">
-                                <label for="">Salary Structure @error('salary_structure')   <small class="text-danger">{{$message}}</small> @enderror</label>
-                                <select name="" id="" class="form-control" wire:model.live="salary_structure" disabled readonly="">
+                                <label for="">Salary Structure @error('salary_structure') <small
+                                class="text-danger">{{$message}}</small> @enderror</label>
+                                <select name="" id="" class="form-control" wire:model.live="salary_structure" disabled
+                                    readonly="">
                                     <option value="">Select Salary Structure</option>
                                     @foreach(\App\Models\SalaryStructure::all() as $salary_structure)
                                         <option value="{{$salary_structure->id}}">{{$salary_structure->name}}</option>
@@ -94,15 +101,17 @@
                                 </select>
                             </div>
                             @php
-                                $salObj=\App\Models\SalaryStructure::find($this->salary_structure);
-   if (!is_null($salary_structure)){
-$salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this->salary_structure)->select('grade_level')->get();
+                                $salObj = \App\Models\SalaryStructure::find($this->salary_structure);
+                                if (!is_null($salary_structure)) {
+                                    $salObjs = \App\Models\SalaryStructureTemplate::where('salary_structure_id', $this->salary_structure)->select('grade_level')->distinct()->orderBy('grade_level')->get();
 
-        }
+                                }
                             @endphp
                             <div class="col-12 col-md-4">
-                                <label for="">Grade Level From @error('grade_level_from')   <small class="text-danger">{{$message}}</small> @enderror</label>
-                                <select class="form-control @error('grade_level_from') is-invalid @enderror"  wire:model.blur="grade_level_from" type="number">
+                                <label for="">Grade Level From @error('grade_level_from') <small
+                                class="text-danger">{{$message}}</small> @enderror</label>
+                                <select class="form-control @error('grade_level_from') is-invalid @enderror"
+                                    wire:model.blur="grade_level_from" type="number">
                                     <option value="">Select Grade Level</option>
                                     @if($this->salary_structure != '')
                                         @foreach($salObjs as $obj)
@@ -115,14 +124,16 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             <div class="col-12 col-md-4">
 
                                 @php
-                                    $salObj=\App\Models\SalaryStructure::find($this->salary_structure);
-   if (!is_null($salary_structure)){
-$salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this->salary_structure)->select('grade_level')->get();
+                                    $salObj = \App\Models\SalaryStructure::find($this->salary_structure);
+                                    if (!is_null($salary_structure)) {
+                                        $salObjs = \App\Models\SalaryStructureTemplate::where('salary_structure_id', $this->salary_structure)->select('grade_level')->distinct()->orderBy('grade_level')->get();
 
-        }
+                                    }
                                 @endphp
-                                <label for="">Grade Level To  @error('grade_level_to')<small class="text-danger">{{$message}}</small>@enderror</label>
-                                <select   class="form-control @error('grade_level_to') is-invalid @enderror"  wire:model.blur="grade_level_to" type="number" >
+                                <label for="">Grade Level To @error('grade_level_to')<small
+                                class="text-danger">{{$message}}</small>@enderror</label>
+                                <select class="form-control @error('grade_level_to') is-invalid @enderror"
+                                    wire:model.blur="grade_level_to" type="number">
                                     <option value="">Select Grade Level</option>
                                     @if($this->salary_structure != '')
                                         @foreach($salObjs as $obj)
@@ -134,10 +145,11 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">Allowance  @error('allowance')<small class="text-danger">{{$message}}</small>@enderror</label>
+                                    <label for="">Allowance @error('allowance')<small
+                                    class="text-danger">{{$message}}</small>@enderror</label>
                                     <select name="" class="form-control text-capitalize" wire:model.defer="allowance">
                                         <option value="">Select Allowance</option>
-                                        @foreach(\App\Models\Allowance::where('status',1)->get() as $ss)
+                                        @foreach(\App\Models\Allowance::where('status', 1)->get() as $ss)
                                             <option value="{{$ss->id}}">{{$ss->allowance_name}}</option>
                                         @endforeach
                                     </select>
@@ -145,8 +157,10 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">Allowance Type  @error('allowance_type')<small class="text-danger">{{$message}}</small>@enderror</label>
-{{--                                    <input type="text" wire:model="allowance_type" class="form-control" readonly disabled>--}}
+                                    <label for="">Allowance Type @error('allowance_type')<small
+                                    class="text-danger">{{$message}}</small>@enderror</label>
+                                    {{-- <input type="text" wire:model="allowance_type" class="form-control" readonly
+                                        disabled>--}}
                                     <select name="" id="" wire:model.defer="allowance_type" class="form-control">
                                         <option value="">Select Allowance Type</option>
                                         <option value="1">Percentage of Basics</option>
@@ -156,7 +170,8 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">Value  @error('value')<small class="text-danger">{{$message}}</small>@enderror</label>
+                                    <label for="">Value @error('value')<small
+                                    class="text-danger">{{$message}}</small>@enderror</label>
                                     <input type="text" wire:model="value" class="form-control">
                                 </div>
                             </div>
@@ -171,23 +186,28 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
         @endcan
 
     @endif
-    @if($create==true)
+    @if($create == true)
         @can('can_save')
             <div>
                 <form wire:submit.prevent="store()">
-                    <div wire:loading style="position: absolute;z-index: 9999;text-align: center;width: 100%;height: 50vh;padding: 25vh">
+                    <div wire:loading
+                        style="position: absolute;z-index: 9999;text-align: center;width: 100%;height: 50vh;padding: 25vh">
                         <div style="background: rgba(14,13,13,0.13);margin: auto;max-width:100px;">
                             <i class="fa fa-spin fa-spinner" style="font-size:100px"></i>
                         </div>
                     </div>
                     <fieldset>
-                        <legend><h6>Add Allowance Template</h6></legend>
+                        <legend>
+                            <h6>Add Allowance Template</h6>
+                        </legend>
 
                         <div class="row">
                             <div class="col-12 col-md-6">
                                 <div class="form-group">
-                                    <label for="">Salary Structure @error('salary_structure_name') <small class="text-danger">{{$message}}</small> @enderror</label>
-                                    <select name="" class="form-control text-capitalize" wire:model.live="salary_structure_name">
+                                    <label for="">Salary Structure @error('salary_structure_name') <small
+                                    class="text-danger">{{$message}}</small> @enderror</label>
+                                    <select name="" class="form-control text-capitalize"
+                                        wire:model.live="salary_structure_name">
                                         <option value="">Select Salary Structure</option>
                                         @foreach(\App\Models\SalaryStructure::all() as $ss)
                                             <option value="{{$ss->id}}">{{$ss->name}}</option>
@@ -198,10 +218,11 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             </div>
                             <div class="col-12 col-md-6">
                                 <div class="form-group">
-                                    <label for="">Allowance @error('allowance_name') <small class="text-danger">{{$message}}</small> @enderror</label>
+                                    <label for="">Allowance @error('allowance_name') <small
+                                    class="text-danger">{{$message}}</small> @enderror</label>
                                     <select name="" class="form-control text-capitalize" wire:model.defer="allowance_name">
                                         <option value="">Select Allowance</option>
-                                        @foreach(\App\Models\Allowance::where('status',1)->get() as $ss)
+                                        @foreach(\App\Models\Allowance::where('status', 1)->get() as $ss)
                                             <option value="{{$ss->id}}">{{$ss->allowance_name}}</option>
                                         @endforeach
                                     </select>
@@ -211,15 +232,17 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             <div class="col-12 col-lg-6">
 
                                 @php
-                                    $salObj=\App\Models\SalaryStructure::find($this->salary_structure_name);
-                                    if (!is_null($salary_structure_name)){
-                                    $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this->salary_structure_name)->select('grade_level')->get();
+                                    $salObj = \App\Models\SalaryStructure::find($this->salary_structure_name);
+                                    if (!is_null($salary_structure_name)) {
+                                        $salObjs = \App\Models\SalaryStructureTemplate::where('salary_structure_id', $this->salary_structure_name)->select('grade_level')->distinct()->orderBy('grade_level')->get();
 
-        }
+                                    }
                                 @endphp
                                 <div class="form-group">
-                                    <label >Grade Level From  @error('grade_level_from')<small class="text-danger">{{$message}}</small>@enderror</label>
-                                    <select  class="form-control @error('grade_level_from') is-invalid @enderror" name="grade_level_from" wire:model.blur="grade_level_from" type="number" >
+                                    <label>Grade Level From @error('grade_level_from')<small
+                                    class="text-danger">{{$message}}</small>@enderror</label>
+                                    <select class="form-control @error('grade_level_from') is-invalid @enderror"
+                                        name="grade_level_from" wire:model.blur="grade_level_from" type="number">
                                         <option value="">Select Grade Level</option>
                                         @if($this->salary_structure_name != '')
                                             @foreach($salObjs as $obj)
@@ -232,15 +255,17 @@ $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this-
                             </div>
                             <div class="col-12 col-lg-6">
                                 @php
-                                    $salObj=\App\Models\SalaryStructure::find($this->salary_structure_name);
-if (!is_null($salary_structure_name)){
-                                    $salObjs=\App\Models\SalaryStructureTemplate::where('salary_structure_id',$this->salary_structure_name)->select('grade_level')->get();
+                                    $salObj = \App\Models\SalaryStructure::find($this->salary_structure_name);
+                                    if (!is_null($salary_structure_name)) {
+                                        $salObjs = \App\Models\SalaryStructureTemplate::where('salary_structure_id', $this->salary_structure_name)->select('grade_level')->distinct()->orderBy('grade_level')->get();
 
-        }
+                                    }
                                 @endphp
                                 <div class="form-group">
-                                    <label>Grade Level To  @error('grade_level_to')<small class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
-                                    <select  class="form-control @error('grade_level_to') is-invalid @enderror" name="grade_level_to" wire:model.defer="grade_level_to" type="number" >
+                                    <label>Grade Level To @error('grade_level_to')<small
+                                    class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
+                                    <select class="form-control @error('grade_level_to') is-invalid @enderror"
+                                        name="grade_level_to" wire:model.defer="grade_level_to" type="number">
                                         <option value="">Select Grade Level</option>
                                         @if($this->salary_structure_name != '')
                                             @foreach($salObjs as $obj)
@@ -253,7 +278,8 @@ if (!is_null($salary_structure_name)){
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">Allowance Type   @error('allowance_type')<small class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
+                                    <label for="">Allowance Type @error('allowance_type')<small
+                                    class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
                                     <select name="" id="" wire:model.defer="allowance_type" class="form-control">
                                         <option value="">Select Allowance Type</option>
                                         <option value="1">Percentage of Basics</option>
@@ -264,7 +290,8 @@ if (!is_null($salary_structure_name)){
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">Amount   @error('amount')<small class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
+                                    <label for="">Amount @error('amount')<small
+                                    class="text-danger d-block form-text">{{$message}}</small>@enderror</label>
                                     <input name="" id="" wire:model.defer="amount" class="form-control">
 
                                 </div>
@@ -287,6 +314,6 @@ if (!is_null($salary_structure_name)){
         Salary Allowance Template
     @endsection
     @section('page_title')
-       Payroll Settings / Allowance Template
+        Payroll Settings / Allowance Template
     @endsection
 </div>
