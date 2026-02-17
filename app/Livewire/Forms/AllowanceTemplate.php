@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Imports\StepMatrixImport;
 use App\Jobs\AllowanceJob;
 use App\Models\ActivityLog;
 use App\Models\SalaryAllowanceTemplate;
@@ -230,9 +231,10 @@ class AllowanceTemplate extends Component
         $this->validate([
             'step_structure_id' => 'required|integer',
             'step_allowance_id' => 'required|integer',
-            'step_matrix_file' => 'required|file|mimes:csv,txt',
+            'step_matrix_file' => 'required|file|mimes:xlsx,xls,csv,txt',
         ]);
 
+        $extension = strtolower($this->step_matrix_file->getClientOriginalExtension());
         $path = $this->step_matrix_file->store('imports');
         $fullPath = Storage::path($path);
 
@@ -241,65 +243,125 @@ class AllowanceTemplate extends Component
             return;
         }
 
-        $handle = fopen($fullPath, 'r');
-        if (!$handle) {
-            $this->alert('error', 'Unable to open uploaded file.');
-            return;
-        }
-
         $imported = 0;
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) < 2) {
-                continue;
-            }
 
-            $first = trim($row[0], " \t\n\r\0\x0B\"'");
-            // Normalize grade value (e.g. "07", " 10.00 ") to integer
-            $gradeNumeric = null;
-            if (is_numeric($first)) {
-                $gradeNumeric = (int)$first;
-            } else {
-                $clean = preg_replace('/[^0-9\.]/', '', $first);
-                if ($clean !== '' && is_numeric($clean)) {
-                    $gradeNumeric = (int)$clean;
-                }
-            }
+        if (in_array($extension, ['xlsx', 'xls'])) {
+            // Use Laravel Excel to read native Excel files
+            $import = new StepMatrixImport();
+            $import->import($fullPath);
 
-            if ($gradeNumeric === null || $gradeNumeric <= 0) {
-                // Skip headers / non-grade rows
-                continue;
-            }
-
-            // Columns 1..N are step1..stepN
-            for ($i = 1; $i < count($row); $i++) {
-                $raw = trim($row[$i]);
-                if ($raw === '' || $raw === '-' || $raw === '--') {
-                    continue;
-                }
-                $numericStr = str_replace([',', ' '], '', trim($raw, "\"' "));
-                if ($numericStr === '' || !is_numeric($numericStr)) {
+            $rows = $import->rows ?? collect();
+            foreach ($rows as $row) {
+                // $row is a Collection; convert to a simple array with numeric keys
+                $rowArray = array_values($row->toArray());
+                if (count($rowArray) < 2) {
                     continue;
                 }
 
-                $value = (float)$numericStr;
-                $step = $i; // column index 1 => step 1, etc.
+                $first = trim((string) $rowArray[0], " \t\n\r\0\x0B\"'");
+                $gradeNumeric = null;
+                if (is_numeric($first)) {
+                    $gradeNumeric = (int)$first;
+                } else {
+                    $clean = preg_replace('/[^0-9\.]/', '', $first);
+                    if ($clean !== '' && is_numeric($clean)) {
+                        $gradeNumeric = (int)$clean;
+                    }
+                }
 
-                StepAllowanceTemplate::updateOrCreate(
-                    [
-                        'salary_structure_id' => $this->step_structure_id,
-                        'grade_level' => $gradeNumeric,
-                        'step' => $step,
-                        'allowance_id' => $this->step_allowance_id,
-                    ],
-                    [
-                        'value' => $value,
-                    ]
-                );
-                $imported++;
+                if ($gradeNumeric === null || $gradeNumeric <= 0) {
+                    continue;
+                }
+
+                for ($i = 1; $i < count($rowArray); $i++) {
+                    $raw = trim((string) $rowArray[$i]);
+                    if ($raw === '' || $raw === '-' || $raw === '--') {
+                        continue;
+                    }
+                    $numericStr = str_replace([',', ' '], '', trim($raw, "\"' "));
+                    if ($numericStr === '' || !is_numeric($numericStr)) {
+                        continue;
+                    }
+
+                    $value = (float) $numericStr;
+                    $step = $i; // column index 1 => step 1, etc.
+
+                    StepAllowanceTemplate::updateOrCreate(
+                        [
+                            'salary_structure_id' => $this->step_structure_id,
+                            'grade_level' => $gradeNumeric,
+                            'step' => $step,
+                            'allowance_id' => $this->step_allowance_id,
+                        ],
+                        [
+                            'value' => $value,
+                        ]
+                    );
+                    $imported++;
+                }
             }
+        } else {
+            // Fallback: plain CSV/TXT via fgetcsv
+            $handle = fopen($fullPath, 'r');
+            if (!$handle) {
+                $this->alert('error', 'Unable to open uploaded file.');
+                return;
+            }
+
+            while (($row = fgetcsv($handle)) !== false) {
+                if (count($row) < 2) {
+                    continue;
+                }
+
+                $first = trim($row[0], " \t\n\r\0\x0B\"'");
+                // Normalize grade value (e.g. "07", " 10.00 ") to integer
+                $gradeNumeric = null;
+                if (is_numeric($first)) {
+                    $gradeNumeric = (int)$first;
+                } else {
+                    $clean = preg_replace('/[^0-9\.]/', '', $first);
+                    if ($clean !== '' && is_numeric($clean)) {
+                        $gradeNumeric = (int)$clean;
+                    }
+                }
+
+                if ($gradeNumeric === null || $gradeNumeric <= 0) {
+                    // Skip headers / non-grade rows
+                    continue;
+                }
+
+                // Columns 1..N are step1..stepN
+                for ($i = 1; $i < count($row); $i++) {
+                    $raw = trim($row[$i]);
+                    if ($raw === '' || $raw === '-' || $raw === '--') {
+                        continue;
+                    }
+                    $numericStr = str_replace([',', ' '], '', trim($raw, "\"' "));
+                    if ($numericStr === '' || !is_numeric($numericStr)) {
+                        continue;
+                    }
+
+                    $value = (float)$numericStr;
+                    $step = $i; // column index 1 => step 1, etc.
+
+                    StepAllowanceTemplate::updateOrCreate(
+                        [
+                            'salary_structure_id' => $this->step_structure_id,
+                            'grade_level' => $gradeNumeric,
+                            'step' => $step,
+                            'allowance_id' => $this->step_allowance_id,
+                        ],
+                        [
+                            'value' => $value,
+                        ]
+                    );
+                    $imported++;
+                }
+            }
+
+            fclose($handle);
         }
 
-        fclose($handle);
         $this->step_matrix_file = null;
 
         if ($imported > 0) {

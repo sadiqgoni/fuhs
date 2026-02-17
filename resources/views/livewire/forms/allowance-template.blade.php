@@ -117,11 +117,9 @@
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="">CSV File</label>
-                                    <input type="file" class="form-control form-control-sm" wire:model="step_matrix_file" accept=".csv">
-                                    <small class="text-muted d-block">
-                                        Use the CSV you exported from Excel. First column = Grade, next columns = Step1..StepN.
-                                    </small>
+                                    <label for="">Excel / CSV File</label>
+                                    <input type="file" class="form-control form-control-sm" wire:model="step_matrix_file" accept=".xlsx,.xls,.csv,.txt">
+                                  
                                 </div>
                             </div>
                         </div>

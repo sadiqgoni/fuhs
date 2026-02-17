@@ -19,45 +19,48 @@
                         <i class="fa fa-spin fa-spinner" style="font-size:100px"></i>
                     </div>
                 </div>
-                <div>
-                    <input type="text" class="form-control-sm" wire:model.live="search" placeholder="Search for Employee..">
+                <div class="d-flex flex-wrap align-items-center">
+                    <div class="flex-grow-1">
+                        <input type="text" class="form-control-sm mb-1 mb-md-0" wire:model.live="search"
+                               placeholder="Search for Employee..">
 
-                    <label for="">Filter By:</label>
-                    <select name="" id="" class="form-control-sm" wire:model.live="filter_type">
-                        <option value="">Employee Type</option>
-                        @foreach(\App\Models\EmploymentType::all() as $emp_type)
-                            <option value="{{$emp_type->id}}">{{$emp_type->name}}</option>
-                        @endforeach
-                    </select>
-                    <select name="" id="" class="form-control-sm" wire:model.live="filter_unit">
-                        <option value="">Unit</option>
-                        @foreach(\App\Models\Unit::get() as $unit_filter)
-                            <option value="{{$unit_filter->id}}">{{$unit_filter->name}}</option>
-                        @endforeach
-                    </select>
-                    <select name="" id="" class="form-control-sm" wire:model.live="filter_dept">
-                        <option value="">Department</option>
-                        @foreach($depts as $dept)
-                            <option value="{{$dept->id}}">{{$dept->name}}</option>
-                        @endforeach
-                    </select>
+                        <label for="" class="ml-2">Filter By:</label>
+                        <select name="" id="" class="form-control-sm" wire:model.live="filter_type">
+                            <option value="">Employee Type</option>
+                            @foreach(\App\Models\EmploymentType::all() as $emp_type)
+                                <option value="{{$emp_type->id}}">{{$emp_type->name}}</option>
+                            @endforeach
+                        </select>
+                        <select name="" id="" class="form-control-sm" wire:model.live="filter_unit">
+                            <option value="">Unit</option>
+                            @foreach(\App\Models\Unit::get() as $unit_filter)
+                                <option value="{{$unit_filter->id}}">{{$unit_filter->name}}</option>
+                            @endforeach
+                        </select>
+                        <select name="" id="" class="form-control-sm" wire:model.live="filter_dept">
+                            <option value="">Department</option>
+                            @foreach($depts as $dept)
+                                <option value="{{$dept->id}}">{{$dept->name}}</option>
+                            @endforeach
+                        </select>
 
-
-                    <label for="">Show record per-page</label>
-                    <select name="" id="" class="form-control-sm" wire:model.live="perpage">
-                        <option value="50"></option>
-                        <option value="100">100</option>
-                        <option value="250">250</option>
-                        <option value="500">500</option>
-                        <option value="1000">1000</option>
-                    </select>
+                        <label for="" class="ml-2">Show record per-page</label>
+                        <select name="" id="" class="form-control-sm" wire:model.live="perpage">
+                            <option value="50"></option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                        </select>
+                    </div>
 
                     @can('can_save')
-                        <button class="btn btn-sm reset_btn ml-3" type="button" wire:click.prevent="resetAllSalaries()">
-                            Reset All Salaries
-                        </button>
+                        <div class="ml-auto mt-2 mt-md-0">
+                            <button class="btn btn-sm reset_btn" type="button" wire:click.prevent="resetAllSalaries()">
+                                Reset All Salaries
+                            </button>
+                        </div>
                     @endcan
-
                 </div>
 
 
