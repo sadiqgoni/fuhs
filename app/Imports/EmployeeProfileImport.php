@@ -19,6 +19,13 @@ class EmployeeProfileImport implements ToCollection, WithHeadingRow
 //    , WithBatchInserts, WithUpserts, WithValidation
 {
     use Importable;
+
+    /**
+     * Map old employee IDs (from backup file) to newly created EmployeeProfile IDs.
+     *
+     * @var array<int,int>
+     */
+    protected array $idMap = [];
     /**
      * @param array $row
      *
@@ -33,7 +40,9 @@ class EmployeeProfileImport implements ToCollection, WithHeadingRow
             }else{
                 $union=$row['staff_union'];
             }
-            EmployeeProfile::create([
+
+            // Create employee profile and remember mapping from old id -> new id
+            $employee = EmployeeProfile::create([
                 'employment_id'=>$row['employment_id'],
                 'full_name'=>$row['full_name'],
                 'department'=>$row['department'],
@@ -77,10 +86,34 @@ class EmployeeProfileImport implements ToCollection, WithHeadingRow
                 'relationship'=>$row['relationship'],
                 'address'=>$row['address'],
             ]);
+
+            if (isset($row['id']) && is_numeric($row['id'])) {
+                $this->idMap[(int) $row['id']] = $employee->id;
+            }
         }
         foreach ($rows as $row){
+            // Determine the old employee id from the backup row
+            $oldEmployeeId = null;
+            if (isset($row['employee_id']) && is_numeric($row['employee_id'])) {
+                $oldEmployeeId = (int) $row['employee_id'];
+            } elseif (isset($row['id']) && is_numeric($row['id'])) {
+                $oldEmployeeId = (int) $row['id'];
+            }
+
+            if (!$oldEmployeeId || !isset($this->idMap[$oldEmployeeId])) {
+                // No matching employee in this restore run – skip to avoid misalignment
+                continue;
+            }
+
+            $newEmployeeId = $this->idMap[$oldEmployeeId];
+
+            // If there is no basic salary at all, treat as "no salary row" and skip
+            if (!isset($row['basic_salary']) || $row['basic_salary'] === '' || $row['basic_salary'] === null) {
+                continue;
+            }
+
             SalaryUpdate::create([
-                'employee_id'=>$row['employee_id'],
+                'employee_id'=>$newEmployeeId,
                 'basic_salary'=>$row['basic_salary'],
                 'A1'=>$row['a1'],
                 'A2'=>$row['a2'],
