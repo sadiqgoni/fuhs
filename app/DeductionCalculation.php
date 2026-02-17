@@ -184,33 +184,18 @@ class DeductionCalculation
             $activeBracket = \App\Models\TaxBracket::active()->first();
 
             if ($activeBracket && $activeBracket->tax_brackets) {
-                // Replicate the full calculation logic from paye_calculation1 but use dynamic brackets
+                // For PAYE, we now follow your Excel logic:
+                // - Ignore taxable allowances (hazard, etc.) for tax base
+                // - Use ONLY basic salary to build annual gross
+                // This keeps tax base consistent with your sheet and lets you
+                // handle NHIS etc. separately if needed.
 
-                // Get taxable allowances (same as old system)
-                $allowances = \App\Models\Allowance::leftJoin('salary_allowance_templates', 'salary_allowance_templates.allowance_id', 'allowances.id')
-                    ->select('salary_allowance_templates.*', 'allowances.taxable', 'allowances.status')
-                    ->where('taxable', 1)
-                    ->where('status', 1)
-                    ->get();
+                $total_allow = 0; // ignore allowances for tax purposes
 
-                $total_allow = 0;
-                foreach ($allowances as $allowance) {
-                    try {
-                        if ($allowance->allowance_type == 1) {
-                            $amount = round($basic_salary / 100 * $allowance->value, 2);
-                        } else {
-                            $amount = $allowance->value;
-                        }
-                        $total_allow += round($amount, 2);
-                    } catch (\Exception $e) {
-                        continue;
-                    }
-                }
-
-                // Calculate annual figures
+                // Calculate annual figures using basic only
                 $annual_basic = round($basic_salary * 12, 2);
-                $annual_allowance = round($total_allow * 12, 2);
-                $annual_gross = round($annual_basic + $annual_allowance, 2);
+                $annual_allowance = 0;
+                $annual_gross = $annual_basic;
 
                 // Calculate reliefs using dynamic bracket reliefs
                 $total_relief = 0;
@@ -232,14 +217,17 @@ class DeductionCalculation
                         }
                     }
                 } else {
-                    // Fallback to old system reliefs
-                    // CRA = ₦200,000 + 20% of Gross (as requested)
+                    // Fallback to system reliefs (aligned with your Excel):
+                    // CRA = ₦200,000 + 20% of Gross, where Gross = annual basic
                     $agp = round((20 / 100) * $annual_gross, 2);
                     $consolidated_relief = 200000.00 + $agp;
+
+                    // Statutory reliefs – based on basic only
                     $pension = round((8 / 100) * $annual_basic, 2);
                     $nhf = round((2.5 / 100) * $annual_basic, 2);
-                    $nhis = round((0.5 / 100) * $annual_basic, 2);
-                    $total_relief = round($consolidated_relief + $pension + $nhf + $nhis, 2);
+
+                    // Per your latest request, do NOT include NHIS in tax relief
+                    $total_relief = round($consolidated_relief + $pension + $nhf, 2);
                 }
 
                 // Calculate taxable income
