@@ -15,7 +15,8 @@
                         <option value="">Select Backup File</option>
                         <option value="1">Payroll Data</option>
                         <option value="2">Loan Deduction History </option>
-                        <option value="3">Employee Profile/ Salary Data</option>
+                        <option value="3">Employee Profile Data</option>
+                        <option value="4">Salary Update Data</option>
                         <option value="5">Salary Template</option>
                         <option value="6">Salary Allowance Template</option>
                         <option value="7">Salary Deduction Template</option>

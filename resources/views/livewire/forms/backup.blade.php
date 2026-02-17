@@ -45,7 +45,8 @@
 {{--                    <label for="">Other Backups</label>--}}
                     <select name="" id="" wire:model="other_backup_type" class="form-control-sm">
                         <option value="">Select what to backup</option>
-                        <option value="1">Employee Profile/Salary Data</option>
+                        <option value="1">Employee Profile Data</option>
+                        <option value="2">Salary Update Data</option>
                         <option value="3">Salary Structure Template</option>
                         <option value="4">Allowance Template</option>
                         <option value="5">Deduction Template</option>
