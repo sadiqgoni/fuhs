@@ -22,6 +22,10 @@
                 </select>
                 @can('can_save')
                     <button class="btn mt-2 create" wire:click.prevent="create_allowance()">Add</button>
+                    <button class="btn mt-2 btn-outline-primary ml-2"
+                            wire:click="$set('show_step_matrix', true)">
+                        Import Step Matrix
+                    </button>
                 @endcan
 
             </div>
@@ -35,7 +39,6 @@
                             <th>Grade Level To</th>
                             <th>Allowance</th>
                             <th>Allowance Type</th>
-
                             <th>Value</th>
                             <th>Action</th>
                         </tr>
@@ -49,8 +52,6 @@
                                 <td>{{$allowance->grade_level_to}}</td>
                                 <td>{{allowance_name($allowance->allowance_id)}}</td>
                                 <td>{{allowance_type($allowance->allowance_type)}}</td>
-
-
                                 <td>@if($allowance->allowance_type == 1)
                                     {{$allowance->value}}%
                                 @else
@@ -79,6 +80,90 @@
                 </table>
             </div>
         </div>
+        {{-- Step-based allowance matrix import (only in list view) --}}
+        @can('can_save')
+            @if($show_step_matrix)
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Step Matrix Import (Grade &amp; Step Specific)</h6>
+                        <small class="text-muted">
+                            Use this to import Excel/CSV tables like the CONHESS/CONMESS Call Duty by step.
+                            Select the Salary Structure and Allowance, then upload the CSV you converted from Excel.
+                        </small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="">Salary Structure</label>
+                                    <select class="form-control form-control-sm" wire:model.live="step_structure_id">
+                                        <option value="">Select Salary Structure</option>
+                                        @foreach(\App\Models\SalaryStructure::all() as $ss)
+                                            <option value="{{$ss->id}}">{{$ss->name}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="">Allowance</label>
+                                    <select class="form-control form-control-sm" wire:model.live="step_allowance_id">
+                                        <option value="">Select Allowance</option>
+                                        @foreach(\App\Models\Allowance::where('status', 1)->get() as $al)
+                                            <option value="{{$al->id}}">{{$al->allowance_name}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="">CSV File</label>
+                                    <input type="file" class="form-control form-control-sm" wire:model="step_matrix_file" accept=".csv">
+                                    <small class="text-muted d-block">
+                                        Use the CSV you exported from Excel. First column = Grade, next columns = Step1..StepN.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right mb-2">
+                            <button type="button" class="btn btn-sm btn-primary" wire:click.prevent="importStepMatrix">
+                                Import Step Matrix
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary ml-2"
+                                    wire:click="$set('show_step_matrix', false)">
+                                Close
+                            </button>
+                        </div>
+
+                        @if(isset($stepPreview) && $stepPreview->count())
+                            <div class="table-responsive mt-2">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                    <tr>
+                                        <th>Grade</th>
+                                        <th>Step</th>
+                                        <th>Amount (₦)</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach($stepPreview as $row)
+                                        <tr>
+                                            <td>{{$row->grade_level}}</td>
+                                            <td>{{$row->step}}</td>
+                                            <td>{{number_format($row->value, 2)}}</td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                                <small class="text-muted">
+                                    Showing {{ $stepPreview->count() }} entries for this structure & allowance.
+                                </small>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        @endcan
     @endif
     @if($edit == true)
         @can('can_edit')
@@ -299,6 +384,8 @@
 
                         </div>
 
+                        {{-- Note: per-step allowance matrices (e.g. CONHESS/CONMESS Call Duty by step)
+                             are imported via a dedicated tool, not through this simple grade-range form. --}}
                     </fieldset>
                     <div class="mt-3 text-center">
                         <button class="btn save_btn ">Submit</button>

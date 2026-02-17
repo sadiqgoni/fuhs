@@ -8,6 +8,7 @@ use App\Models\Allowance;
 use App\Models\Deduction;
 use App\Models\Department;
 use App\Models\SalaryAllowanceTemplate;
+use App\Models\StepAllowanceTemplate;
 use App\Models\SalaryDeductionTemplate;
 use App\Models\SalaryStructure;
 use App\Models\SalaryStructureTemplate;
@@ -35,6 +36,7 @@ class SalaryUpdateCenter extends Component
     public $ids, $si, $search_employee;
     public $search, $filter_dept, $filter_unit, $filter_type, $perpage = 12;
     public $next_id, $previous_id;
+    public $bulkResetInProgress = false;
 
     protected $rules = [
         'salary_arears' => 'nullable|regex:/^\d*(\.\d{2})?$/',
@@ -47,7 +49,7 @@ class SalaryUpdateCenter extends Component
 
     public function getListeners()
     {
-        return ['confirmed', 'dismissed', 'stored'];
+        return ['confirmed', 'dismissed', 'stored', 'bulkResetConfirmed'];
 
     }
 
@@ -325,56 +327,121 @@ class SalaryUpdateCenter extends Component
             'toast' => true,
         ]);
     }
+
+    /**
+     * Reset salaries for all employees in the current list (filtered view).
+     * This is useful after restore/import when some staff have no SalaryUpdate yet.
+     */
+    public function resetAllSalaries()
+    {
+        $this->alert('warning', 'Are you sure you want to reset salaries for all listed employees?', [
+            'showConfirmButton' => true,
+            'confirmButtonText' => 'Yes',
+            'onConfirmed' => 'bulkResetConfirmed',
+            'showCancelButton' => true,
+            'onDismissed' => 'cancelled',
+            'position' => 'center',
+            'timer' => 90000,
+            'timerProgressBar' => true,
+            'toast' => true,
+        ]);
+    }
+
+    public function bulkResetConfirmed()
+    {
+        $this->bulkResetInProgress = true;
+
+        // Build the same employee list as in render(), but without pagination
+        if ($this->search != '') {
+            $query = \App\Models\EmployeeProfile::where('full_name', 'like', "%$this->search%")
+                ->orWhere('phone_number', 'like', "%$this->search%")
+                ->orWhere('payroll_number', 'like', "%$this->search%")
+                ->orWhere('pension_pin', 'like', "%$this->search%")
+                ->orWhere('staff_number', 'like', "%$this->search%");
+        } else {
+            $query = \App\Models\EmployeeProfile::when($this->filter_unit, function ($q) {
+                return $q->where('unit', $this->filter_unit);
+            })
+                ->when($this->filter_dept, function ($q) {
+                    return $q->where('department', $this->filter_dept);
+                })
+                ->when($this->filter_type, function ($q) {
+                    return $q->where('employment_type', $this->filter_type);
+                });
+        }
+
+        $employees = $query->get();
+
+        foreach ($employees as $emp) {
+            $this->employee_info = $emp;
+            $salary = SalaryUpdate::firstOrCreate(
+                ['employee_id' => $emp->id],
+                ['basic_salary' => 0]
+            );
+            $this->salary = $salary;
+            $this->ids = $emp->id;
+
+            // Reuse the single-record reset logic
+            $this->confirmed();
+        }
+
+        $this->bulkResetInProgress = false;
+        $this->alert('success', 'Salaries have been reset for all listed employees.');
+    }
+
     public function confirmed()
     {
-        if ($this->employee_info->status == 1) {
+        if ($this->employee_info && $this->employee_info->status == 1) {
             $salary = $this->salary;
             $emp = $this->employee_info;
-            
+
             // Recalculate basic_salary from template based on current grade_level and step
             $salary_template = SalaryStructureTemplate::where('salary_structure_id', $emp->salary_structure)
                 ->where('grade_level', $emp->grade_level)
                 ->first();
-            
+
             if (!$salary_template) {
                 $this->alert('error', 'Salary template not found for current grade/step. Cannot reset.');
                 return;
             }
-            
+
             $annual_salary = $salary_template["Step" . $emp->step] ?? 0;
             $basic_salary = round($annual_salary / 12, 2);
             $salary->basic_salary = $basic_salary;
-            
+
             $allow_temp = SalaryAllowanceTemplate::where('salary_structure_id', $emp->salary_structure)
                 ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
                 ->get();
-            $deduct_temp = SalaryDeductionTemplate::where('salary_structure_id', $emp->salary_structure)
-                ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
-                ->get();
+
+            // Per-step overrides (e.g. Call Duty) for this employee
+            $stepAllowances = StepAllowanceTemplate::where('salary_structure_id', $emp->salary_structure)
+                ->where('grade_level', $emp->grade_level)
+                ->where('step', $emp->step)
+                ->get()
+                ->keyBy('allowance_id');
 
             $allow_total = 0;
-            foreach ($allow_temp as $key => $item) {
-                if ($item->allowance_type == 1) {
-                    $amount = round($basic_salary / 100 * $item->value, 2);
+            foreach ($allow_temp as $item) {
+                if (isset($stepAllowances[$item->allowance_id])) {
+                    $amount = $stepAllowances[$item->allowance_id]->value;
                 } else {
-                    $amount = $item->value;
+                    if ($item->allowance_type == 1) {
+                        $amount = round($basic_salary / 100 * $item->value, 2);
+                    } else {
+                        $amount = $item->value;
+                    }
                 }
                 $salary["A$item->allowance_id"] = $amount;
                 $allow_total += round($amount, 2);
-                $salary->save();
             }
 
             $deduct_total = 0;
             foreach (Deduction::where('status', 1)->get() as $deduction) {
                 if ($deduction->id == 1) {
                     $paye = app(DeductionCalculation::class);
-                    $default_paye_calculation = app_settings()->paye_calculation;
-                    $default_statutory_calculation = app_settings()->statutory_deduction;
-                    // Use dynamic tax calculation system
+                    // Use dynamic tax calculation system (already configured to ignore allowances/NHIS for base)
                     $amount = $paye->compute_tax($basic_salary);
-
                 } else {
-                    $emp = $this->employee_info;
                     $dedTemp = SalaryDeductionTemplate::where('salary_structure_id', $emp->salary_structure)
                         ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
                         ->where('deduction_id', $deduction->id)->first();
@@ -392,20 +459,18 @@ class SalaryUpdateCenter extends Component
                             }
                         }
                         //check union
-                        elseif (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->get()->count() > 0) {
-                            if (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->where('union_id', $emp->staff_union)->get()->count() > 0) {
-                                $amount = $amount;
-                            } else {
+                        elseif (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->exists()) {
+                            if (!UnionDeduction::where('deduction_id', $dedTemp->deduction_id)
+                                ->where('union_id', $emp->staff_union)->exists()) {
                                 $amount = 0.00;
                             }
                         }
                     } else {
-                        $amount = $salary["D$deduction->id"];
+                        $amount = $salary["D$deduction->id"] ?? 0;
                     }
                 }
                 $salary["D$deduction->id"] = $amount;
                 $deduct_total += round($amount, 2);
-                $salary->save();
             }
 
             $total_earning = round($basic_salary + $allow_total + ($salary->salary_arears ?? 0), 2);
@@ -422,6 +487,7 @@ class SalaryUpdateCenter extends Component
             $salary->total_deduction = $deduct_total;
             $salary->total_allowance = $allow_total;
             $salary->save();
+
             $this->alert('success', 'Salary have been reset to default');
             $this->view($this->ids);
 

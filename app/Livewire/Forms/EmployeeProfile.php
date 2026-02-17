@@ -16,6 +16,7 @@ use App\Models\Rank;
 use App\Models\Relationship;
 use App\Models\Religion;
 use App\Models\SalaryAllowanceTemplate;
+use App\Models\StepAllowanceTemplate;
 use App\Models\SalaryDeductionTemplate;
 use App\Models\SalaryStructure;
 use App\Models\SalaryStructureTemplate;
@@ -449,6 +450,13 @@ class EmployeeProfile extends Component
         $a = SalaryAllowanceTemplate::where('salary_structure_id', $this->salary_structure)
             ->whereRaw('? between grade_level_from and grade_level_to', [$this->grade_level])
             ->get();
+
+        // Optional per-step overrides (e.g. Call Duty by step)
+        $stepAllowances = StepAllowanceTemplate::where('salary_structure_id', $this->salary_structure)
+            ->where('grade_level', $this->grade_level)
+            ->where('step', $this->step)
+            ->get()
+            ->keyBy('allowance_id');
         $d = SalaryDeductionTemplate::where('salary_structure_id', $this->salary_structure)
             ->whereRaw('? between grade_level_from and grade_level_to', [$this->grade_level])
             ->get();
@@ -464,10 +472,15 @@ class EmployeeProfile extends Component
                 //alowance
                 $total_allow = 0;
                 foreach ($a as $key => $allow) {
-                    if ($allow->allowance_type == 1) {
-                        $amount = round($basic_salary / 100 * $allow->value, 2);
+                    // If there is a per-step override for this allowance, use that fixed value
+                    if (isset($stepAllowances[$allow->allowance_id])) {
+                        $amount = $stepAllowances[$allow->allowance_id]->value;
                     } else {
-                        $amount = $allow->value;
+                        if ($allow->allowance_type == 1) {
+                            $amount = round($basic_salary / 100 * $allow->value, 2);
+                        } else {
+                            $amount = $allow->value;
+                        }
                     }
                     $salary_update["A$allow->allowance_id"] = $amount;
                     $total_allow += round($amount, 2);

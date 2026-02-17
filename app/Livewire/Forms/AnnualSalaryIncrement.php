@@ -8,6 +8,7 @@ use App\Models\Deduction;
 use App\Models\Department;
 use App\Models\EmploymentType;
 use App\Models\SalaryAllowanceTemplate;
+use App\Models\StepAllowanceTemplate;
 use App\Models\SalaryDeductionTemplate;
 use App\Models\SalaryStructure;
 use App\Models\SalaryStructureTemplate;
@@ -222,11 +223,23 @@ class AnnualSalaryIncrement extends Component
 
                         $salary_update->basic_salary = $basic_salary;
 
+                        // Per-step overrides for this employee after increment
+                        $stepAllowances = StepAllowanceTemplate::where('salary_structure_id', $employee->salary_structure)
+                            ->where('grade_level', $employee->grade_level)
+                            ->where('step', $grade_step)
+                            ->get()
+                            ->keyBy('allowance_id');
+
                         // Update Allowances
                         foreach (SalaryAllowanceTemplate::where('salary_structure_id', $employee->salary_structure)
                             ->whereRaw('? between grade_level_from and grade_level_to', [$employee->grade_level])
                             ->where('allowance_type', 1)->get() as $allowance) {
-                            $salary_update["A$allowance->allowance_id"] = round($basic_salary / 100 * $allowance->value);
+                            if (isset($stepAllowances[$allowance->allowance_id])) {
+                                $amount = $stepAllowances[$allowance->allowance_id]->value;
+                            } else {
+                                $amount = round($basic_salary / 100 * $allowance->value);
+                            }
+                            $salary_update["A$allowance->allowance_id"] = $amount;
                             $salary_update->save();
                         }
 

@@ -5,6 +5,7 @@ namespace App\Livewire\Forms;
 use App\Jobs\AllowanceJob;
 use App\Models\ActivityLog;
 use App\Models\SalaryAllowanceTemplate;
+use App\Models\StepAllowanceTemplate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class AllowanceTemplate extends Component
     use WithFileUploads;
     use WithPagination;
     use LivewireAlert;
+    // Existing generic import props (currently unused)
     public $importFile;
     public $batchId;
     public $importing = false;
@@ -31,6 +33,13 @@ class AllowanceTemplate extends Component
     public $importFinished = false;
     public $iteration;
     public $failures;
+
+    // Step-based allowance matrix import
+    public $step_structure_id;
+    public $step_allowance_id;
+    public $step_matrix_file;
+    public $show_step_matrix = false;
+
     public $salary_structure_name, $allowance_name, $amount;
     protected $listeners = ['confirmed'];
 
@@ -193,6 +202,110 @@ class AllowanceTemplate extends Component
         $allowances = SalaryAllowanceTemplate::when($this->filter_allow, function ($query) {
             return $query->where('salary_structure_id', $this->filter_allow);
         })->paginate($this->perpage);
-        return view('livewire.forms.allowance-template', compact('allowances'))->extends('components.layouts.app');
+
+        $stepPreview = collect();
+        if ($this->step_structure_id && $this->step_allowance_id) {
+            $stepPreview = StepAllowanceTemplate::where('salary_structure_id', $this->step_structure_id)
+                ->where('allowance_id', $this->step_allowance_id)
+                ->orderBy('grade_level')
+                ->orderBy('step')
+                ->limit(200)
+                ->get();
+        }
+
+        return view('livewire.forms.allowance-template', [
+            'allowances' => $allowances,
+            'stepPreview' => $stepPreview,
+        ])->extends('components.layouts.app');
+    }
+
+    /**
+     * Import a step-based allowance matrix (grade x step) from a CSV.
+     * The CSV is expected to have:
+     * - First column: grade level (e.g. 7, 8, 9, ... or 07, 08, 10.00 ...)
+     * - Subsequent columns: step1, step2, step3... amounts (strings with commas, quotes).
+     */
+    public function importStepMatrix()
+    {
+        $this->validate([
+            'step_structure_id' => 'required|integer',
+            'step_allowance_id' => 'required|integer',
+            'step_matrix_file' => 'required|file|mimes:csv,txt',
+        ]);
+
+        $path = $this->step_matrix_file->store('imports');
+        $fullPath = Storage::path($path);
+
+        if (!file_exists($fullPath)) {
+            $this->alert('error', 'Uploaded file could not be found on server.');
+            return;
+        }
+
+        $handle = fopen($fullPath, 'r');
+        if (!$handle) {
+            $this->alert('error', 'Unable to open uploaded file.');
+            return;
+        }
+
+        $imported = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            if (count($row) < 2) {
+                continue;
+            }
+
+            $first = trim($row[0], " \t\n\r\0\x0B\"'");
+            // Normalize grade value (e.g. "07", " 10.00 ") to integer
+            $gradeNumeric = null;
+            if (is_numeric($first)) {
+                $gradeNumeric = (int)$first;
+            } else {
+                $clean = preg_replace('/[^0-9\.]/', '', $first);
+                if ($clean !== '' && is_numeric($clean)) {
+                    $gradeNumeric = (int)$clean;
+                }
+            }
+
+            if ($gradeNumeric === null || $gradeNumeric <= 0) {
+                // Skip headers / non-grade rows
+                continue;
+            }
+
+            // Columns 1..N are step1..stepN
+            for ($i = 1; $i < count($row); $i++) {
+                $raw = trim($row[$i]);
+                if ($raw === '' || $raw === '-' || $raw === '--') {
+                    continue;
+                }
+                $numericStr = str_replace([',', ' '], '', trim($raw, "\"' "));
+                if ($numericStr === '' || !is_numeric($numericStr)) {
+                    continue;
+                }
+
+                $value = (float)$numericStr;
+                $step = $i; // column index 1 => step 1, etc.
+
+                StepAllowanceTemplate::updateOrCreate(
+                    [
+                        'salary_structure_id' => $this->step_structure_id,
+                        'grade_level' => $gradeNumeric,
+                        'step' => $step,
+                        'allowance_id' => $this->step_allowance_id,
+                    ],
+                    [
+                        'value' => $value,
+                    ]
+                );
+                $imported++;
+            }
+        }
+
+        fclose($handle);
+        $this->step_matrix_file = null;
+
+        if ($imported > 0) {
+            $this->alert('success', "Imported $imported step-based allowance values successfully.");
+        } else {
+            $this->alert('warning', 'No valid grade/step values were found in the uploaded file.');
+        }
     }
 }

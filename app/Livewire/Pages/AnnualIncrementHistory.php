@@ -12,6 +12,7 @@ use App\Models\EmployeeProfile;
 use App\Models\SalaryAllowanceTemplate;
 use App\Models\SalaryDeductionTemplate;
 use App\Models\SalaryUpdate;
+use App\Models\StepAllowanceTemplate;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
@@ -79,10 +80,22 @@ class AnnualIncrementHistory extends Component
         $employee->step = $increment->old_grade_step;
         $employee->save();
         $salary_update->basic_salary = $old_basic_salary;
+
+        $stepAllowances = StepAllowanceTemplate::where('salary_structure_id', $employee->salary_structure)
+            ->where('grade_level', $employee->grade_level)
+            ->where('step', $employee->step)
+            ->get()
+            ->keyBy('allowance_id');
+
         foreach (SalaryAllowanceTemplate::where('salary_structure_id', $employee->salary_structure)
             ->whereRaw('? between grade_level_from and grade_level_to', [$employee->grade_level])
             ->where('allowance_type', 1)->get() as $allowance) {
-            $salary_update["A{$allowance->allowance_id}"] = round($old_basic_salary / 100 * $allowance->value, 2);
+            if (isset($stepAllowances[$allowance->allowance_id])) {
+                $amount = $stepAllowances[$allowance->allowance_id]->value;
+            } else {
+                $amount = round($old_basic_salary / 100 * $allowance->value, 2);
+            }
+            $salary_update["A{$allowance->allowance_id}"] = $amount;
         }
         $salary_update->save();
         foreach (SalaryDeductionTemplate::where('salary_structure_id', $employee->salary_structure)

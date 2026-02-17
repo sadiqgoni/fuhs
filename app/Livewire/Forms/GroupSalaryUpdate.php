@@ -9,6 +9,7 @@ use App\Models\Deduction;
 use App\Models\Department;
 use App\Models\EmploymentType;
 use App\Models\SalaryAllowanceTemplate;
+use App\Models\StepAllowanceTemplate;
 use App\Models\SalaryDeductionTemplate;
 use App\Models\SalaryStructure;
 use App\Models\SalaryStructureTemplate;

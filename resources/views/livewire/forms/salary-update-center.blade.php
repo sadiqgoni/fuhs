@@ -52,6 +52,12 @@
                         <option value="1000">1000</option>
                     </select>
 
+                    @can('can_save')
+                        <button class="btn btn-sm reset_btn ml-3" type="button" wire:click.prevent="resetAllSalaries()">
+                            Reset All Salaries
+                        </button>
+                    @endcan
+
                 </div>
 
 

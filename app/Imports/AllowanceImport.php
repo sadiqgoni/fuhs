@@ -3,7 +3,6 @@
 namespace App\Imports;
 
 use App\Models\SalaryAllowanceTemplate;
-use App\Models\SalaryDeductionTemplate;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\ToModel;
@@ -31,8 +30,6 @@ class AllowanceImport implements ToModel, WithHeadingRow, WithBatchInserts, With
             'allowance_id'=>$row['allowance_id'],
             'allowance_type'=>$row['allowance_type'],
             'value'=>$row['value'],
-//            'created_at'=>$row['created_at'],
-//            'updated_at'=>$row['updated_at'],
         ]);
     }
     public function batchSize(): int
