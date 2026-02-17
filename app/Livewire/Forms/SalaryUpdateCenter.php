@@ -329,17 +329,33 @@ class SalaryUpdateCenter extends Component
     {
         if ($this->employee_info->status == 1) {
             $salary = $this->salary;
-            $allow_temp = SalaryAllowanceTemplate::where('salary_structure_id', $this->employee_info->salary_structure)
-                //                        ->whereRaw('? between grade_level_from and grade_level_to', [$this->grade_level])
+            $emp = $this->employee_info;
+            
+            // Recalculate basic_salary from template based on current grade_level and step
+            $salary_template = SalaryStructureTemplate::where('salary_structure_id', $emp->salary_structure)
+                ->where('grade_level', $emp->grade_level)
+                ->first();
+            
+            if (!$salary_template) {
+                $this->alert('error', 'Salary template not found for current grade/step. Cannot reset.');
+                return;
+            }
+            
+            $annual_salary = $salary_template["Step" . $emp->step] ?? 0;
+            $basic_salary = round($annual_salary / 12, 2);
+            $salary->basic_salary = $basic_salary;
+            
+            $allow_temp = SalaryAllowanceTemplate::where('salary_structure_id', $emp->salary_structure)
+                ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
                 ->get();
-            $deduct_temp = SalaryDeductionTemplate::where('salary_structure_id', $this->employee_info->salary_structure)
-                //                        ->whereRaw('? between grade_level_from and grade_level_to', [$this->grade_level])
+            $deduct_temp = SalaryDeductionTemplate::where('salary_structure_id', $emp->salary_structure)
+                ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
                 ->get();
 
             $allow_total = 0;
             foreach ($allow_temp as $key => $item) {
                 if ($item->allowance_type == 1) {
-                    $amount = round($salary->basic_salary / 100 * $item->value, 2);
+                    $amount = round($basic_salary / 100 * $item->value, 2);
                 } else {
                     $amount = $item->value;
                 }
@@ -350,7 +366,6 @@ class SalaryUpdateCenter extends Component
 
             $deduct_total = 0;
             foreach (Deduction::where('status', 1)->get() as $deduction) {
-                $basic_salary = $salary->basic_salary;
                 if ($deduction->id == 1) {
                     $paye = app(DeductionCalculation::class);
                     $default_paye_calculation = app_settings()->paye_calculation;
@@ -378,7 +393,7 @@ class SalaryUpdateCenter extends Component
                         }
                         //check union
                         elseif (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->get()->count() > 0) {
-                            if (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->where('union_id', $this->staff_union)->get()->count() > 0) {
+                            if (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->where('union_id', $emp->staff_union)->get()->count() > 0) {
                                 $amount = $amount;
                             } else {
                                 $amount = 0.00;
@@ -388,16 +403,15 @@ class SalaryUpdateCenter extends Component
                         $amount = $salary["D$deduction->id"];
                     }
                 }
-                $salary_update["D$deduction->id"] = $amount;
+                $salary["D$deduction->id"] = $amount;
                 $deduct_total += round($amount, 2);
                 $salary->save();
             }
 
-            $basic_salary = $salary->basic_salary;
-            $total_earning = round($basic_salary + $allow_total + $salary->salary_arears, 2);
+            $total_earning = round($basic_salary + $allow_total + ($salary->salary_arears ?? 0), 2);
             $gross_pay = $total_earning;
             $total_deduction = $deduct_total;
-            $deduct_salary_deduct = round($total_deduction + $salary->D5, 2);
+            $deduct_salary_deduct = round($total_deduction + ($salary->D5 ?? 0), 2);
             $net_pay = round($gross_pay - $deduct_salary_deduct, 2);
             $nhis = (0.5 / 100) * $gross_pay;
             $employer_pension = (10 / 100) * $gross_pay;

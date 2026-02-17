@@ -1,18 +1,16 @@
 <div>
-    {{-- Close your eyes. Count to one. That is how long forever feels. --}}
-    <style>
-
-    </style>
     <div class="row">
         <div class="col-lg-12 p-3">
             <form action="" wire:submit="confirm()">
                 <fieldset>
-                    <div wire:loading  style="position: absolute;z-index: 9999;text-align: center;width: 100%;height: 50vh;padding: 25vh">
+                    <div wire:loading style="position: absolute;z-index: 9999;text-align: center;width: 100%;height: 50vh;padding: 25vh">
                         <div style="background: rgba(14,13,13,0.13);margin: auto;max-width:100px;">
                             <i class="fa fa-spin fa-spinner" style="font-size:100px"></i>
                         </div>
                     </div>
-                    <legend>Employee Selection:</legend>
+                    <legend class="mb-3">Employee Selection</legend>
+                    <p class="text-muted small mb-3">Use the filters below to narrow the list, then check the staff you want to include in this group update.</p>
+
                     <div class="row">
                         <div class="col-12 col-md-4">
                             @error('employment_type')
@@ -101,7 +99,51 @@
                     </div>
                     @include('livewire.forms.ssd')
 
-
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            @error('specific_employee_ids')
+                                <strong class="text-danger d-block form-text">{{ $message }}</strong>
+                            @enderror
+                            <div class="form-group">
+                                <label class="font-weight-bold text-dark">Select employees (grouped by grade level)</label>
+                                <div class="border rounded p-3" style="max-height: 500px; overflow-y: auto; background: #f8f9fa;">
+                                    <div class="row">
+                                        @forelse($specific_candidates as $groupName => $employees)
+                                            <div class="col-md-4 mb-4">
+                                                <div class="card shadow-sm h-100 border-primary">
+                                                    <div class="card-header bg-white py-2 border-bottom">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <h6 class="mb-0 font-weight-bold text-dark" style="font-size: 0.9rem;">{{ $groupName }}</h6>
+                                                            <span class="badge badge-primary">{{ count($employees) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body p-0">
+                                                        <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
+                                                            @foreach ($employees as $emp)
+                                                                <label class="list-group-item list-group-item-action d-flex align-items-center px-3 py-2 mb-0 cursor-pointer">
+                                                                    <input type="checkbox" class="mr-3" value="{{ $emp->id }}" wire:model="specific_employee_ids">
+                                                                    <div class="d-flex flex-column" style="line-height: 1.2;">
+                                                                        <span class="font-weight-bold text-dark" style="font-size: 0.85rem;">{{ $emp->full_name }}</span>
+                                                                        <small class="text-muted">{{ $emp->staff_number }}</small>
+                                                                    </div>
+                                                                </label>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="col-12 text-center py-5 text-muted">
+                                                <p class="mb-0">No employees match the current filters.</p>
+                                                <small>Adjust Employment Type, Unit, Department, Salary Structure or Grade Level above.</small>
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted mt-2">Check the boxes to select employees for this group allowance/deduction update.</small>
+                            </div>
+                        </div>
+                    </div>
 
                 </fieldset>
 
@@ -145,35 +187,26 @@
                             </div>
                             <div class="row">
                                 @if($selected_allow_deduct != 1 || $this->update_allow_deduct==1)
-                                <div class="col">
-                                    <label for="">Percentage of Basic</label>
-                                    <input type="text" class="form-control-sm @error('percentage_of_basic') is-invalid text-danger @enderror" wire:model.live="percentage_of_basic" placeholder="@error('percentage_of_basic') {{$message}} @enderror">
-                                </div>
+                                    {{-- For all allowances and non-PAYE deductions, allow percentage/fixed amount --}}
+                                    <div class="col">
+                                        <label for="">Percentage of Basic</label>
+                                        <input type="text" class="form-control-sm @error('percentage_of_basic') is-invalid text-danger @enderror" wire:model.live="percentage_of_basic" placeholder="@error('percentage_of_basic') {{$message}} @enderror">
+                                    </div>
 
-                                <div class="col">
-                                    <label for="" class="d-block">Fixed Amount </label>
-                                    <input type="text" class="form-control-sm @error('fixed_amount') is-invalid text-danger @enderror" wire:model.live="fixed_amount" placeholder="@error('fixed_amount') {{$message}} @enderror">NGN
-                                </div>
+                                    <div class="col">
+                                        <label for="" class="d-block">Fixed Amount </label>
+                                        <input type="text" class="form-control-sm @error('fixed_amount') is-invalid text-danger @enderror" wire:model.live="fixed_amount" placeholder="@error('fixed_amount') {{$message}} @enderror">NGN
+                                    </div>
                                 @endif
-                                    @if($selected_allow_deduct==1 && $paye_calculation==0)
-                                        <div class="col">
-                                            <label for="">Percentage of Basic</label>
-                                            <input type="text" class="form-control-sm @error('percentage_of_basic') is-invalid text-danger @enderror" wire:model.live="percentage_of_basic" placeholder="@error('percentage_of_basic') {{$message}} @enderror">
-                                        </div>
-                                    @endif
+
+                                {{-- When updating PAYE as a deduction, always use Tax Bracket logic (no formula options) --}}
                                 @if($selected_allow_deduct==1 && $update_allow_deduct==2 )
-                                        <div class="col">
-                                            <label for="">Paye Calculation Option @error('paye_calculation') <strong class="text-danger">{{$message}}</strong>@enderror</label>
-                                            <select type="text" class="form-control @error('paye_calculation') is-invalid @enderror" wire:model.live="paye_calculation">
-                                                {{--                                    <option value="">Select paye calculation</option>--}}
-                                                <option value="1">Use Deduction Template</option>
-                                                <option value="2">Formular 1</option>
-                                                <option value="3">Formular 2</option>
-                                                <option value="0">As Percentage of Basic</option>
-
-                                            </select>
-                                        </div>
-
+                                    <div class="col">
+                                        <label class="d-block">PAYE Calculation</label>
+                                        <small class="text-muted d-block">
+                                            PAYE will be calculated automatically using the active Tax Bracket
+                                        </small>
+                                    </div>
                                 @endif
                             </div>
 

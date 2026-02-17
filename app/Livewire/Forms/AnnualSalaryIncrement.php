@@ -36,85 +36,82 @@ class AnnualSalaryIncrement extends Component
     $grade_level_to,
     $status;
     public $number_of_increment, $increment_date, $count;
-    public $selection_mode = 'criteria'; // 'criteria' or 'specific'
     public $min_service_months;
     public $specific_employee_ids = [];
     use LivewireAlert;
     protected $rules = [
         'number_of_increment' => 'required|integer|min:1|max:5',
         'increment_date' => 'required',
-        'selection_mode' => 'required',
         'min_service_months' => 'nullable|integer|min:0',
         'arrears_months' => 'nullable|numeric|min:0',
-        'specific_employee_ids' => 'required_if:selection_mode,specific|array'
+        'specific_employee_ids' => 'required|array|min:1',
     ];
-    public $preview_employees = [];
 
+    protected function messages()
+    {
+        return [
+            'specific_employee_ids.required' => 'Please select at least one employee for the increment.',
+            'specific_employee_ids.min' => 'Please select at least one employee for the increment.',
+        ];
+    }
     public $arrears_months;
 
     public function updated($pro)
     {
         $this->validateOnly($pro);
-
-        if (in_array($pro, ['min_service_months', 'increment_date', 'salary_structure', 'grade_level_from', 'grade_level_to', 'employee_type', 'staff_category', 'status', 'unit', 'department'])) {
-            $this->updatePreview();
-        }
     }
 
-    public function updatePreview()
+    /** Base query with current filters (used for list and for submit). */
+    protected function filteredEmployeeQuery()
     {
-        if ($this->selection_mode == 'criteria' && $this->min_service_months && $this->min_service_months > 0) {
-            $employees = $this->getFilteredEmployees();
-            $this->preview_employees = $employees->take(100); // Limit preview to 100
-        } else {
-            $this->preview_employees = [];
+        return \App\Models\EmployeeProfile::when($this->salary_structure, function ($query) {
+            return $query->where('salary_structure', $this->salary_structure);
+        })
+            ->when($this->grade_level_from, function ($query) {
+                return $query->whereBetween('grade_level', [$this->grade_level_from, $this->grade_level_to]);
+            })
+            ->when($this->employee_type, function ($query) {
+                return $query->where('employment_type', $this->employee_type);
+            })
+            ->when($this->staff_category, function ($query) {
+                return $query->where('staff_category', $this->staff_category);
+            })
+            ->when($this->status, function ($query) {
+                return $query->where('status', $this->status);
+            })
+            ->when($this->unit, function ($query) {
+                return $query->where('unit', $this->unit);
+            })
+            ->when($this->department, function ($query) {
+                return $query->where('department', $this->department);
+            });
+    }
+
+    /** Apply tenure filter (min service months) to a collection. */
+    protected function applyTenureFilter($employees)
+    {
+        if (!$this->min_service_months || $this->min_service_months <= 0 || !$this->increment_date) {
+            return $employees;
         }
+        $referenceDate = Carbon::parse($this->increment_date);
+        return $employees->filter(function ($employee) use ($referenceDate) {
+            if (!$employee->date_of_first_appointment) {
+                return false;
+            }
+            $appointmentDate = Carbon::parse($employee->date_of_first_appointment);
+            $employee->service_months_diff = $appointmentDate->diffInMonths($referenceDate);
+            return $appointmentDate->lte($referenceDate) && $appointmentDate->diffInMonths($referenceDate) >= $this->min_service_months;
+        });
     }
 
     public function getFilteredEmployees()
     {
-        $employees = collect();
-
-        if ($this->selection_mode == 'criteria') {
-            $employees = \App\Models\EmployeeProfile::when($this->salary_structure, function ($query) {
-                return $query->where('salary_structure', $this->salary_structure);
-            })
-                ->when($this->grade_level_from, function ($query) {
-                    return $query->whereBetween('grade_level', [$this->grade_level_from, $this->grade_level_to]);
-                })
-                ->when($this->employee_type, function ($query) {
-                    return $query->where('employment_type', $this->employee_type);
-                })
-                ->when($this->staff_category, function ($query) {
-                    return $query->where('staff_category', $this->staff_category);
-                })
-                ->when($this->status, function ($query) {
-                    return $query->where('status', $this->status);
-                })
-                ->when($this->unit, function ($query) {
-                    return $query->where('unit', $this->unit);
-                })
-                ->when($this->department, function ($query) {
-                    return $query->where('department', $this->department);
-                })
-                ->get();
-        } elseif ($this->selection_mode == 'specific') {
-            $employees = \App\Models\EmployeeProfile::whereIn('id', $this->specific_employee_ids)->get();
+        $query = $this->filteredEmployeeQuery();
+        if (!empty($this->specific_employee_ids)) {
+            $query->whereIn('id', $this->specific_employee_ids);
         }
-
-        // Filter by Tenure (Minimum Service Months)
-        if ($this->selection_mode == 'criteria' && $this->min_service_months && $this->min_service_months > 0 && $this->increment_date) {
-            $referenceDate = Carbon::parse($this->increment_date);
-            $employees = $employees->filter(function ($employee) use ($referenceDate) {
-                if (!$employee->date_of_first_appointment)
-                    return false;
-                $appointmentDate = Carbon::parse($employee->date_of_first_appointment);
-                $employee->service_months_diff = $appointmentDate->diffInMonths($referenceDate); // Attach specific calc for display
-                return $appointmentDate->lte($referenceDate) && $appointmentDate->diffInMonths($referenceDate) >= $this->min_service_months;
-            });
-        }
-
-        return $employees;
+        $employees = $query->get();
+        return $this->applyTenureFilter($employees);
     }
 
     protected $listeners = ['confirmed', 'canceled'];
@@ -321,7 +318,6 @@ class AnnualSalaryIncrement extends Component
                 "timer" => 9000
             ]);
 
-            // Clear selection on success
             $this->specific_employee_ids = [];
 
             $user = Auth::user();
@@ -354,19 +350,16 @@ class AnnualSalaryIncrement extends Component
         $this->units = Unit::where('status', 1)->get();
         $deductions = Deduction::all();
 
-        $specific_candidates = [];
-        if ($this->selection_mode == 'specific') {
-            // Fetch employees grouped by Grade and Step
-            $specific_candidates = \App\Models\EmployeeProfile::where('status', 1)
-                ->select('id', 'full_name', 'staff_number', 'grade_level', 'step')
-                ->orderBy('grade_level')
-                ->orderBy('step')
-                ->orderBy('full_name')
-                ->get()
-                ->groupBy(function ($item) {
-                    return 'Grade Level ' . $item->grade_level . ' - Step ' . $item->step;
-                });
-        }
+        $employees = $this->filteredEmployeeQuery()
+            ->select('id', 'full_name', 'staff_number', 'grade_level', 'step', 'date_of_first_appointment')
+            ->orderBy('grade_level')
+            ->orderBy('step')
+            ->orderBy('full_name')
+            ->get();
+        $employees = $this->applyTenureFilter($employees);
+        $specific_candidates = $employees->groupBy(function ($item) {
+            return 'Grade Level ' . $item->grade_level . ' - Step ' . $item->step;
+        });
 
         return view('livewire.forms.annual-salary-increment', [
             'specific_candidates' => $specific_candidates

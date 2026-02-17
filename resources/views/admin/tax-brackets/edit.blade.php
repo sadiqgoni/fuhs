@@ -97,49 +97,6 @@
                             </div>
                         </div>
 
-                        <!-- Tax Reliefs Section -->
-                        <div class="card mt-4">
-                            <div class="card-header">
-                                <h5 class="mb-0">Tax Reliefs (Optional)</h5>
-                                <small class="text-muted">Configure tax relief amounts</small>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="consolidated_rent_relief">Consolidated Rent Relief (₦)</label>
-                                            <input type="number" class="form-control" id="consolidated_rent_relief"
-                                                   name="reliefs[consolidated_rent_relief][fixed]" value="{{ old('reliefs.consolidated_rent_relief.fixed', $taxBracket->reliefs['consolidated_rent_relief']['fixed'] ?? '200000') }}"
-                                                   placeholder="200000">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="pension_rate">Pension Rate (%)</label>
-                                            <input type="number" class="form-control" id="pension_rate"
-                                                   name="reliefs[pension_contribution][percentage]" value="{{ old('reliefs.pension_contribution.percentage', $taxBracket->reliefs['pension_contribution']['percentage'] ?? '8') }}" step="0.01"
-                                                   placeholder="8">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="nhf_rate">NHF Rate (%)</label>
-                                            <input type="number" class="form-control" id="nhf_rate"
-                                                   name="reliefs[nhf_contribution][percentage]" value="{{ old('reliefs.nhf_contribution.percentage', $taxBracket->reliefs['nhf_contribution']['percentage'] ?? '2.5') }}" step="0.01"
-                                                   placeholder="2.5">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="nhis_rate">NHIS Rate (%)</label>
-                                            <input type="number" class="form-control" id="nhis_rate"
-                                                   name="reliefs[nhis_contribution][percentage]" value="{{ old('reliefs.nhis_contribution.percentage', $taxBracket->reliefs['nhis_contribution']['percentage'] ?? '0.5') }}" step="0.01"
-                                                   placeholder="0.5">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="card-footer">

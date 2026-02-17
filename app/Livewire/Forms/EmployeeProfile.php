@@ -520,9 +520,13 @@ class EmployeeProfile extends Component
                 $salary_update->basic_salary = $basic_salary;
                 $salary_update->total_allowance = $total_allow;
                 $salary_update->total_deduction = $total_deduct;
-                $total_earning = round($basic_salary + $total_allow, 2);
+                $total_earning = round($basic_salary + $total_allow + ($salary_update->salary_arears ?? 0), 2);
                 $gross_pay = $total_earning;
                 $net_pay = round($gross_pay - $salary_update->total_deduction, 2);
+                $nhis = (0.5 / 100) * $gross_pay;
+                $employer_pension = (10 / 100) * $gross_pay;
+                $salary_update->nhis = round($nhis, 2);
+                $salary_update->employer_pension = round($employer_pension, 2);
                 $salary_update->gross_pay = $gross_pay;
                 $salary_update->net_pay = $net_pay;
                 $salary_update->save();

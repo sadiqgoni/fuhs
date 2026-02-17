@@ -39,28 +39,49 @@ class TaxBracket extends Model
     }
 
     // Methods
+    /**
+     * Calculate tax using progressive tax brackets (like climbing stairs).
+     * Each bracket applies only to the portion of income that falls within its range.
+     * 
+     * Example: Taxable Income = ₦1,454,815.85
+     * - First ₦300k → 7% = ₦21,000 (remaining: ₦1,154,815.85)
+     * - Next ₦300k → 11% = ₦33,000 (remaining: ₦854,815.85)
+     * - Next ₦500k → 15% = ₦75,000 (remaining: ₦354,815.85)
+     * - Next ₦500k → 19% = ₦67,415.01 (only ₦354,815.85 remains, so tax that amount)
+     * Total = ₦196,415.01
+     */
     public function calculateTax($annualTaxableIncome)
     {
-        if (!$this->tax_brackets) {
+        if (!$this->tax_brackets || $annualTaxableIncome <= 0) {
             return 0;
         }
 
         $tax = 0;
         $remainingIncome = $annualTaxableIncome;
 
-        foreach ($this->tax_brackets as $bracket) {
+        // Sort brackets by min to ensure correct order
+        $sortedBrackets = collect($this->tax_brackets)->sortBy('min')->values()->all();
+
+        foreach ($sortedBrackets as $bracket) {
             if ($remainingIncome <= 0) break;
 
-            $min = $bracket['min'] ?? 0;
-            $max = $bracket['max'] ?? null; // null means no upper limit
-            $rate = $bracket['rate'] ?? 0;
+            $min = (float)($bracket['min'] ?? 0);
+            $max = isset($bracket['max']) ? (float)$bracket['max'] : null;
+            $rate = (float)($bracket['rate'] ?? 0);
 
-            // Calculate taxable amount in this bracket
-            $bracketMax = $max ?? PHP_INT_MAX;
-            $taxableInBracket = min($remainingIncome, $bracketMax - $min);
+            // Calculate how much of remaining income falls in this bracket
+            if ($max === null) {
+                // Last bracket (no upper limit) - tax all remaining income
+                $taxableInBracket = $remainingIncome;
+            } else {
+                // Calculate bracket width (how much income this bracket covers)
+                $bracketWidth = $max - $min;
+                // Take the minimum of: remaining income OR bracket width
+                $taxableInBracket = min($remainingIncome, $bracketWidth);
+            }
 
             if ($taxableInBracket > 0) {
-                $tax += $taxableInBracket * ($rate / 100); // Convert percentage to decimal
+                $tax += $taxableInBracket * ($rate / 100);
                 $remainingIncome -= $taxableInBracket;
             }
         }

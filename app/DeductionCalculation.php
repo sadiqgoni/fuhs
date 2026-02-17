@@ -233,11 +233,12 @@ class DeductionCalculation
                     }
                 } else {
                     // Fallback to old system reliefs
-                    $agp = round((20/100) * $annual_gross, 2);
+                    // CRA = ₦200,000 + 20% of Gross (as requested)
+                    $agp = round((20 / 100) * $annual_gross, 2);
                     $consolidated_relief = 200000.00 + $agp;
-                    $pension = round((8/100) * $annual_basic, 2);
-                    $nhf = round((2.5/100) * $annual_basic, 2);
-                    $nhis = round((0.5/100) * $annual_basic, 2);
+                    $pension = round((8 / 100) * $annual_basic, 2);
+                    $nhf = round((2.5 / 100) * $annual_basic, 2);
+                    $nhis = round((0.5 / 100) * $annual_basic, 2);
                     $total_relief = round($consolidated_relief + $pension + $nhf + $nhis, 2);
                 }
 

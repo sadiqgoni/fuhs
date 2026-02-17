@@ -44,13 +44,23 @@ class GroupSalaryUpdate extends Component
         $amount=0.00,
         $paye_calculation,
         $statutory_deduction;
-    public $pc=false;
+    public $pc = false;
+    public $specific_employee_ids = [];
     use LivewireAlert;
 
     protected function rules()
     {
         return [
             'selected_allow_deduct' => 'required',
+            'specific_employee_ids' => 'required|array|min:1',
+        ];
+    }
+
+    protected function messages()
+    {
+        return [
+            'specific_employee_ids.required' => 'Please select at least one employee for the group update.',
+            'specific_employee_ids.min' => 'Please select at least one employee for the group update.',
         ];
     }
     protected $listeners=['confirmed','canceled'];
@@ -339,47 +349,54 @@ class GroupSalaryUpdate extends Component
                 }
             }
 
-            $count=$employees->count();
-            $this->alert('success',"Group update performed successfully, $count  records have been updated",['timer'=>9100]);
-            $user=Auth::user();
-            $log=new ActivityLog();
-            $log->user_id=$user->id;
-            $log->action="Made a group salary update ";
+            $count = $employees->count();
+            $this->alert('success', "Group update performed successfully, $count records have been updated", ['timer' => 9100]);
+            $user = Auth::user();
+            $log = new ActivityLog();
+            $log->user_id = $user->id;
+            $log->action = "Made a group salary update ";
             $log->save();
-        }else{
-            $this->alert('warning','There is no staff that matches your selection criteria, please check and try again',
-                ['timer'=>9100]);
+            $this->specific_employee_ids = [];
+        } else {
+            $this->alert('warning', 'There is no staff that matches your selection criteria, please check and try again', ['timer' => 9100]);
         }
-
     }
+    /**
+     * Base query with current filters (used for both criteria and for narrowing specific list).
+     */
+    protected function filteredEmployeeQuery()
+    {
+        return \App\Models\EmployeeProfile::when($this->salary_structure, function ($query) {
+            return $query->where('salary_structure', $this->salary_structure);
+        })
+            ->when($this->employee_type, function ($query) {
+                return $query->where('employment_type', $this->employee_type);
+            })
+            ->when($this->staff_category, function ($query) {
+                return $query->where('staff_category', $this->staff_category);
+            })
+            ->when($this->unit, function ($query) {
+                return $query->where('unit', $this->unit);
+            })
+            ->when($this->department, function ($query) {
+                return $query->where('department', $this->department);
+            })
+            ->when($this->status, function ($query) {
+                return $query->where('status', $this->status);
+            })
+            ->when($this->grade_level_from, function ($query) {
+                return $query->whereBetween('grade_level', [$this->grade_level_from, $this->grade_level_to]);
+            });
+    }
+
     public function employee()
     {
-
-
-        $employees=\App\Models\EmployeeProfile::when($this->salary_structure,function ($query){
-            return $query->where('salary_structure',$this->salary_structure);
-        })
-            ->when($this->employee_type,function ($query){
-                return $query->where('employment_type',$this->employee_type);
-            })
-            -> when($this->staff_category,function ($query){
-                return $query->where('staff_category',$this->staff_category);
-            })
-            ->when($this->unit,function ($query){
-                return $query->where('unit',$this->unit);
-            })
-            ->when($this->department,function ($query){
-                return $query->where('department',$this->department);
-            })
-            ->when($this->status,function ($query){
-                return $query->where('status',$this->status);
-            })
-            ->when($this->grade_level_from,function ($query){
-                return $query->whereBetween('grade_level',[$this->grade_level_from,$this->grade_level_to]);
-            })
-//            ->limit('100')
-            ->get();
-        return $employees;
+        if (!empty($this->specific_employee_ids)) {
+            return $this->filteredEmployeeQuery()
+                ->whereIn('id', $this->specific_employee_ids)
+                ->get();
+        }
+        return collect();
     }
     public function updatedUpdateAllowDeduct(){
 
@@ -430,11 +447,24 @@ class GroupSalaryUpdate extends Component
     }
     public function render()
     {
-        $this->types=EmploymentType::all();
-        $this->categories=StaffCategory::all();
-        $this->salary_structures=SalaryStructure::where('status',1)->get();
-        $this->units=Unit::where('status',1)->get();
-        $deductions=Deduction::all();
-        return view('livewire.forms.group-salary-update')->extends('components.layouts.app');
+        $this->types = EmploymentType::all();
+        $this->categories = StaffCategory::all();
+        $this->salary_structures = SalaryStructure::where('status', 1)->get();
+        $this->units = Unit::where('status', 1)->get();
+        $deductions = Deduction::all();
+
+        $specific_candidates = $this->filteredEmployeeQuery()
+            ->select('id', 'full_name', 'staff_number', 'grade_level', 'step')
+            ->orderBy('grade_level')
+            ->orderBy('step')
+            ->orderBy('full_name')
+            ->get()
+            ->groupBy(function ($item) {
+                return 'Grade Level ' . $item->grade_level . ' - Step ' . $item->step;
+            });
+
+        return view('livewire.forms.group-salary-update', [
+            'specific_candidates' => $specific_candidates,
+        ])->extends('components.layouts.app');
     }
 }
