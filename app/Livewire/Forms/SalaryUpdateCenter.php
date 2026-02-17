@@ -150,6 +150,36 @@ class SalaryUpdateCenter extends Component
         $this->record = true;
     }
 
+    /**
+     * Get next/previous employee IDs only among employees who have a salary record and still exist.
+     * This avoids landing on an employee without a record when clicking Next/Previous
+     * (e.g. after restore when IDs or salary_updates are out of sync).
+     */
+    protected function getNextPreviousIdsWithSalary(int $currentId): array
+    {
+        $employeeIdsWithSalary = \App\Models\EmployeeProfile::whereIn('id', SalaryUpdate::pluck('employee_id'))
+            ->pluck('id')
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+        $next_id = null;
+        $previous_id = null;
+        foreach ($employeeIdsWithSalary as $eid) {
+            if ($eid > $currentId) {
+                $next_id = $eid;
+                break;
+            }
+        }
+        foreach (array_reverse($employeeIdsWithSalary) as $eid) {
+            if ($eid < $currentId) {
+                $previous_id = $eid;
+                break;
+            }
+        }
+        return ['next_id' => $next_id, 'previous_id' => $previous_id];
+    }
+
     public function view($id)
     {
         $this->record = false;
@@ -162,14 +192,27 @@ class SalaryUpdateCenter extends Component
             return;
         }
 
-        $this->next_id = \App\Models\EmployeeProfile::where('id', '>', $id)->min('id');
-        $this->previous_id = \App\Models\EmployeeProfile::where('id', '<', $id)->max('id');
+        // Next/Previous only among employees that have a salary record (avoids "Salary record not found" when navigating)
+        $nav = $this->getNextPreviousIdsWithSalary((int) $id);
+        $this->next_id = $nav['next_id'];
+        $this->previous_id = $nav['previous_id'];
 
         $this->salary = SalaryUpdate::where('employee_id', $id)->first();
 
         if (!$this->salary) {
-            $this->alert('error', 'Salary record not found');
             $this->record = true;
+            // Open next or previous employee who has a record so user is not stuck (e.g. after restore when IDs are out of sync)
+            if ($this->next_id !== null) {
+                $this->alert('warning', 'Salary record not found for this employee. Opening next employee with a record.', ['timer' => 3500]);
+                $this->view($this->next_id);
+                return;
+            }
+            if ($this->previous_id !== null) {
+                $this->alert('warning', 'Salary record not found for this employee. Opening previous employee with a record.', ['timer' => 3500]);
+                $this->view($this->previous_id);
+                return;
+            }
+            $this->alert('error', 'Salary record not found for this employee. No other employee with a salary record to open.');
             return;
         }
 

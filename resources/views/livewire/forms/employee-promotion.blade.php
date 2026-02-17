@@ -121,15 +121,20 @@
                             <td>
                                 @if($promotion->status == 1)
                                     <span class="badge badge-success"><em>Done</em></span>
+                                @elseif($promotion->status == 2)
+                                    <span class="badge badge-secondary"><em>Reverted</em></span>
                                 @else
                                     <span class="badge badge-warning"><em>Pending</em></span>
-
                                 @endif
                             </td>
                             <td>
                                 <button style="width: 55px !important;padding: 1px !important;"
                                     class="btn btn-danger float-right" wire:click="deleteId({{$promotion->id}})">Delete</button>
-                                @if($promotion->status != 1)
+                                @if($promotion->status == 1)
+                                    <button style="width: 55px !important;padding: 1px !important;" class="btn btn-warning float-right mr-1"
+                                        wire:click="confirmRevertPromotion({{$promotion->id}})">Revert</button>
+                                @endif
+                                @if($promotion->status != 1 && $promotion->status != 2)
                                     <button style="width: 55px !important;padding: 1px !important;" class="btn edit_btn float-right"
                                         wire:click="edit_record({{$promotion->id}})">Edit</button>
                                 @endif

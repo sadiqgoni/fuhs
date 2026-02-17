@@ -30,7 +30,8 @@ class EmployeePromotion extends Component
     public $arrears_months;
     use LivewireAlert, WithFileUploads, WithPagination, WithoutUrlPagination;
     public $upload_errors;
-    protected $listeners = ['delete', 'confirm', 'clearAll'];
+    public $revertPromotionId = null;
+    protected $listeners = ['delete', 'confirm', 'clearAll', 'revertPromotion'];
     protected $rules = [
         'payroll_number' => 'required',
         'salary_structure' => 'required',
@@ -213,6 +214,12 @@ class EmployeePromotion extends Component
                     if (SalaryUpdate::where('employee_id', $employee->id)->exists()) {
                         $salary_update = SalaryUpdate::where('employee_id', $employee->id)->first();
                         $old_gross = $salary_update->gross_pay; // Capture OLD gross pay
+
+                        // Store previous grade/step for revert (grade level increment revert)
+                        $promotion->old_grade_level = $employee->grade_level;
+                        $promotion->old_step = $employee->step;
+                        $promotion->old_salary_structure = (string) $employee->salary_structure;
+                        $promotion->save();
                         $total_allow = 0;
                         foreach ($a as $key => $allow) {
                             if ($allow->allowance_type == 1) {
@@ -315,6 +322,111 @@ class EmployeePromotion extends Component
         $log->action = "Promoted " . StaffPromotion::get()->count() . " staffs";
         $log->save();
         $this->alert('success', 'Record have been successfully posted to ledger');
+    }
+
+    /**
+     * Revert a grade level increment (promotion): restore employee to previous grade/step and salary.
+     */
+    public function confirmRevertPromotion(int $id): void
+    {
+        $this->revertPromotionId = $id;
+        $this->alert('question', 'Revert this grade level increment? Employee will be restored to previous grade, step and salary.', [
+            'showConfirmButton' => true,
+            'showCancelButton' => true,
+            'onConfirmed' => 'revertPromotion',
+            'timer' => 90000,
+            'position' => 'center',
+            'confirmButtonText' => 'Yes, revert',
+        ]);
+    }
+
+    public function revertPromotion(): void
+    {
+        $id = $this->revertPromotionId;
+        $this->revertPromotionId = null;
+        if (!$id) {
+            return;
+        }
+        $promotion = StaffPromotion::where('id', $id)->where('status', 1)->first();
+        if (!$promotion || $promotion->old_grade_level === null || $promotion->old_step === null) {
+            $this->alert('warning', 'Promotion not found or cannot be reverted (no previous grade/step stored).', ['timer' => 5000]);
+            return;
+        }
+        $employee = \App\Models\EmployeeProfile::where('payroll_number', $promotion->payroll_number)->first();
+        $salary_update = SalaryUpdate::where('employee_id', $employee->id)->first();
+        if (!$employee || !$salary_update) {
+            $this->alert('warning', 'Employee or salary record not found.', ['timer' => 5000]);
+            return;
+        }
+        $old_ss = $promotion->old_salary_structure;
+        $old_level = $promotion->old_grade_level;
+        $old_step = $promotion->old_step;
+        $salary = SalaryStructureTemplate::where('salary_structure_id', $old_ss)->where('grade_level', $old_level)->first();
+        if (!$salary) {
+            $this->alert('warning', 'Salary template not found for previous grade/step.', ['timer' => 5000]);
+            return;
+        }
+        $annual_salary = $salary['Step' . $old_step] ?? 0;
+        $basic_salary = round($annual_salary / 12, 2);
+        $a = SalaryAllowanceTemplate::where('salary_structure_id', $old_ss)->whereRaw('? between grade_level_from and grade_level_to', [$old_level])->get();
+        $total_allow = 0;
+        foreach ($a as $allow) {
+            if ($allow->allowance_type == 1) {
+                $amount = round($basic_salary / 100 * $allow->value, 2);
+            } else {
+                $amount = $allow->value;
+            }
+            $salary_update['A' . $allow->allowance_id] = $amount;
+            $total_allow += round($amount, 2);
+        }
+        $salary_update->save();
+        $total_deduct = 0;
+        foreach (Deduction::where('status', 1)->get() as $deduction) {
+            if ($deduction->id == 1) {
+                $paye = app(DeductionCalculation::class);
+                $amount = $paye->compute_tax($basic_salary);
+            } else {
+                $dedTemp = SalaryDeductionTemplate::where('salary_structure_id', $old_ss)
+                    ->whereRaw('? between grade_level_from and grade_level_to', [$old_level])
+                    ->where('deduction_id', $deduction->id)->first();
+                if (!is_null($dedTemp)) {
+                    if ($dedTemp->deduction_type == 1) {
+                        $amount = round($basic_salary / 100 * $dedTemp->value, 2);
+                    } else {
+                        $amount = $dedTemp->value;
+                    }
+                    if ($dedTemp->deduction_id == 2 || $dedTemp->deduction_id == 3) {
+                        if ($employee->pfa_name == 10) {
+                            $amount = 0.00;
+                        }
+                    } elseif (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->get()->count() > 0) {
+                        if (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->where('union_id', $employee->staff_union)->get()->count() > 0) {
+                            $amount = $amount;
+                        } else {
+                            $amount = 0.00;
+                        }
+                    }
+                } else {
+                    $amount = $salary['D' . $deduction->id] ?? 0;
+                }
+            }
+            $salary_update['D' . $deduction->id] = $amount;
+            $total_deduct += round($amount, 2);
+        }
+        $salary_update->save();
+        $employee->grade_level = $old_level;
+        $employee->step = $old_step;
+        $employee->salary_structure = $old_ss;
+        $employee->save();
+        $salary_update->basic_salary = $basic_salary;
+        $salary_update->total_allowance = $total_allow;
+        $salary_update->total_deduction = $total_deduct;
+        $salary_update->gross_pay = round($basic_salary + $total_allow, 2);
+        $salary_update->net_pay = round($salary_update->gross_pay - $total_deduct, 2);
+        $salary_update->save();
+        $promotion->status = 2; // Reverted
+        $promotion->save();
+        $this->alert('success', 'Grade level increment reverted successfully.');
     }
 
     public function clear_record()

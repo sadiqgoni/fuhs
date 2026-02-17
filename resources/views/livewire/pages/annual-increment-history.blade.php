@@ -52,6 +52,7 @@
                         <th>INCREMENT
                             SALARY </th>
                         <th>STATUS</th>
+                        <th>ACTION</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -69,13 +70,22 @@
                             <td>{{$history->grade_level}}/{{$history->old_grade_step}}</td>
                             <td>{{$history->grade_level}}/{{$history->new_grade_step}}</td>
                             <td>{{success_status($history->status)}}</td>
+                            <td>
+                                @if($history->status == 1)
+                                    @can('can_save')
+                                        <button type="button" class="btn btn-sm btn-warning" wire:click="confirmRevertIncrement({{ $history->id }})">Revert</button>
+                                    @endcan
+                                @else
+                                    —
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         no record
                     @endforelse
                     </tbody>
                     <tr>
-                        <td colspan="6">{{$histories->links()}}</td>
+                        <td colspan="9">{{$histories->links()}}</td>
                     </tr>
                 </table>
 

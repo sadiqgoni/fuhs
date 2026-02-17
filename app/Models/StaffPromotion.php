@@ -14,6 +14,9 @@ class StaffPromotion extends Model
         'level',
         'step',
         'status',
-        'arrears_months'
+        'arrears_months',
+        'old_grade_level',
+        'old_step',
+        'old_salary_structure',
     ];
 }
