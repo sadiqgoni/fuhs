@@ -25,19 +25,19 @@
                                placeholder="Search for Employee..">
 
                         <label for="" class="ml-2">Filter By:</label>
-                        <select name="" id="" class="form-control-sm" wire:model.live="filter_type">
+                        <select name="" id="" class="form-control-sm mr-1" wire:model.live="filter_type">
                             <option value="">Employee Type</option>
                             @foreach(\App\Models\EmploymentType::all() as $emp_type)
                                 <option value="{{$emp_type->id}}">{{$emp_type->name}}</option>
                             @endforeach
                         </select>
-                        <select name="" id="" class="form-control-sm" wire:model.live="filter_unit">
+                        <select name="" id="" class="form-control-sm mr-1" wire:model.live="filter_unit" style="max-width: 110px;">
                             <option value="">Unit</option>
                             @foreach(\App\Models\Unit::get() as $unit_filter)
                                 <option value="{{$unit_filter->id}}">{{$unit_filter->name}}</option>
                             @endforeach
                         </select>
-                        <select name="" id="" class="form-control-sm" wire:model.live="filter_dept">
+                        <select name="" id="" class="form-control-sm mr-1" wire:model.live="filter_dept">
                             <option value="">Department</option>
                             @foreach($depts as $dept)
                                 <option value="{{$dept->id}}">{{$dept->name}}</option>
