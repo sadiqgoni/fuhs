@@ -57,10 +57,10 @@ class AllowanceTemplate extends Component
         if ($this->allowance_type == 1) {
             $this->validate(
                 [
-                    'amount' => ['regex:/^([1-9][0-9]?|100)$/']
+                    'amount' => ['regex:/^\d{1,2}(\.\d{1,2})?$|^100(\.00?)?$/']
                 ],
                 [
-                    'regex' => "The percentage of basic should only accept 1-100"
+                    'regex' => "The percentage of basic should only accept 1-100 (decimals allowed, e.g. 2.5)"
                 ]
             );
         }
@@ -261,11 +261,11 @@ class AllowanceTemplate extends Component
                 $first = trim((string) $rowArray[0], " \t\n\r\0\x0B\"'");
                 $gradeNumeric = null;
                 if (is_numeric($first)) {
-                    $gradeNumeric = (int)$first;
+                    $gradeNumeric = (int) $first;
                 } else {
                     $clean = preg_replace('/[^0-9\.]/', '', $first);
                     if ($clean !== '' && is_numeric($clean)) {
-                        $gradeNumeric = (int)$clean;
+                        $gradeNumeric = (int) $clean;
                     }
                 }
 
@@ -317,11 +317,11 @@ class AllowanceTemplate extends Component
                 // Normalize grade value (e.g. "07", " 10.00 ") to integer
                 $gradeNumeric = null;
                 if (is_numeric($first)) {
-                    $gradeNumeric = (int)$first;
+                    $gradeNumeric = (int) $first;
                 } else {
                     $clean = preg_replace('/[^0-9\.]/', '', $first);
                     if ($clean !== '' && is_numeric($clean)) {
-                        $gradeNumeric = (int)$clean;
+                        $gradeNumeric = (int) $clean;
                     }
                 }
 
@@ -341,7 +341,7 @@ class AllowanceTemplate extends Component
                         continue;
                     }
 
-                    $value = (float)$numericStr;
+                    $value = (float) $numericStr;
                     $step = $i; // column index 1 => step 1, etc.
 
                     StepAllowanceTemplate::updateOrCreate(
