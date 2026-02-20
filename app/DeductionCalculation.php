@@ -18,7 +18,6 @@ class DeductionCalculation
         $salary_structure = $employee['salary_structure'];
         $grade_level = $employee['grade_level'];
         $step = $employee['step'];
-        //        try {
         $salary = SalaryStructureTemplate::where('salary_structure_id', $salary_structure)
             ->where('grade_level', $grade_level)
             ->first();
@@ -37,12 +36,14 @@ class DeductionCalculation
                     ->where('deduction_id', $deduction->id)
                     ->first();
                 if ($deduction->id == 1) {
-                    $amount = $this->paye_calculation1($basic_salary, $statutory_deductionId);
+                    // Compute PAYE using the employee's actual stored taxable allowances
+                    // (total_allowance from salary_update minus A1/Responsibility which is non-taxable)
+                    $a1 = round((float) ($salary_update->A1 ?? 0), 2);
+                    $taxable_allow = max(0, round(($salary_update->total_allowance ?? 0) - $a1, 2));
+                    $amount = $this->compute_tax($basic_salary, $taxable_allow);
                 } elseif (UnionDeduction::where('deduction_id', $deduction->id)->exists()) {
-
                     $amount = employee_union($employee['staff_union'], $deduction_template, $basic_salary);
                 } elseif ($deduction_template != null) {
-
                     if ($deduction->deduction_type == 1) {
                         $amount = round($basic_salary / 100 * $deduction_template->value, 2);
                     } else {
@@ -64,13 +65,7 @@ class DeductionCalculation
             }
             $salary_update->total_deduction = $total;
             $salary_update->save();
-
         }
-        //        }catch (\Exception $e){
-//                dd($e);
-//        }
-
-
     }
 
     public function paye_calculation1($basic_salary, $statutory_deductionId)
@@ -109,21 +104,21 @@ class DeductionCalculation
         if ($statutory_deduction == 1) {
             $pension = round((8 / 100) * $annual_basic, 2);
             $nhf = round((2.5 / 100) * $annual_basic, 2);
-            $nhis = round((0.05 / 100) * $annual_basic, 2);
+            $nhis = 0; // NHIS not applied as separate relief
             $national_pension = 0;
             $gratuity = 0;
         } else {
             $pension = round((8 / 100) * $annual_gross, 2);
             $nhf = round((2.5 / 100) * $annual_gross, 2);
-            $nhis = round((0.05 / 100) * $annual_gross, 2);
+            $nhis = 0; // NHIS not applied as separate relief
             $national_pension = 0;
             $gratuity = 0;
         }
 
         $total_relief = round($consolidated_relief + $pension + $nhf + $nhis + $national_pension + $gratuity, 2);
         $taxable_income = round($annual_gross - $total_relief, 2);
-        //Now compute tax
-        return $this->compute_tax($taxable_income);
+        // Apply progressive tax to already-computed annual taxable income
+        return $this->calculateTaxFromTaxableIncome($taxable_income);
     }
     public function paye_calculation2($basic_salary, $statutory_deductionId)
     {
@@ -168,11 +163,8 @@ class DeductionCalculation
         $annual_gross = round($bi * 12, 2);
         $relief = round($annual_gross * 0.2 + (16666.6666 * 12), 2);
         $taxable_income = round($annual_gross - $relief, 2);
-
-        //Now compute tax
-
-        return $this->compute_tax($taxable_income);
-
+        // Apply progressive tax to already-computed annual taxable income
+        return $this->calculateTaxFromTaxableIncome($taxable_income);
     }
 
     public function compute_tax($basic_salary, $monthly_taxable_allowances = 0.0)
@@ -223,8 +215,12 @@ class DeductionCalculation
                 // ── Apply CRA formula ────────────────────────────────────────
                 // CRA = ₦[cra_fixed] + [cra_pct]% of Annual Gross
                 $cra = round($cra_fixed + ($cra_pct / 100) * $annual_gross, 2);
-                $pension_relief = round(($pension_pct / 100) * $annual_basic, 2);
-                $nhf_relief = round(($nhf_pct / 100) * $annual_basic, 2);
+                // Pension & NHF reliefs on annual GROSS (confirmed by client Excel)
+                // Pension: 8%   × gross = ₦205,779.52 ✓
+                // NHF:     2.5% × gross = ₦64,306.10  ✓
+                // NHIS:    not applied (would double-count the ₦64k)
+                $pension_relief = round(($pension_pct / 100) * $annual_gross, 2);
+                $nhf_relief = round(($nhf_pct / 100) * $annual_gross, 2);
 
                 $total_relief = round($cra + $pension_relief + $nhf_relief, 2);
                 $taxable_income = max(0, round($annual_gross - $total_relief, 2));
@@ -239,6 +235,30 @@ class DeductionCalculation
 
         // Fallback: hardcoded CRA = ₦200,000 + 20% Gross, Pension 8%, NHF 2.5%
         return $this->paye_calculation1($basic_salary, 1);
+    }
+
+    /**
+     * Apply the active tax bracket (or legacy brackets) to an already-computed
+     * ANNUAL taxable income. Returns the MONTHLY PAYE amount.
+     * Use this when the caller has already subtracted all reliefs.
+     */
+    private function calculateTaxFromTaxableIncome(float $taxable_income): float
+    {
+        if ($taxable_income <= 0)
+            return 0.0;
+
+        try {
+            $activeBracket = \App\Models\TaxBracket::active()->first();
+            if ($activeBracket && $activeBracket->tax_brackets) {
+                $annual_tax = $activeBracket->calculateTax($taxable_income);
+                return round($annual_tax / 12, 2);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Tax bracket calculation failed: ' . $e->getMessage());
+        }
+
+        // Legacy hardcoded brackets (fallback)
+        return $this->compute_tax_legacy($taxable_income);
     }
 
 
