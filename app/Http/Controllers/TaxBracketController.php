@@ -57,8 +57,7 @@ class TaxBracketController extends Controller
                 'effective_date' => $request->effective_date,
                 'is_active' => false, // Don't set active yet
                 'tax_brackets' => $request->tax_brackets,
-                // Let the system handle CRA and statutory reliefs dynamically
-                'reliefs' => [],
+                'reliefs' => $request->input('reliefs', []),
                 'description' => $request->description,
             ]);
 
@@ -128,8 +127,7 @@ class TaxBracketController extends Controller
                 'effective_date' => $request->effective_date,
                 'is_active' => $request->is_active ?? false,
                 'tax_brackets' => $request->tax_brackets,
-                // Always clear custom reliefs so system CRA (200k + 20% gross) is used
-                'reliefs' => [],
+                'reliefs' => $request->input('reliefs', []),
                 'description' => $request->description,
             ]);
 

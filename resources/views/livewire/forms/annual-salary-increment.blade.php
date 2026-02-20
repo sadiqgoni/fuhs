@@ -13,7 +13,8 @@
                     <legend>
                         <h6>Employee Selection</h6>
                     </legend>
-                    <p class="text-muted small mb-3">Use the filters below to narrow the list, then check the staff you want to include in this annual increment.</p>
+                    <p class="text-muted small mb-3">Use the filters below to narrow the list, then check the staff you
+                        want to include in this annual increment.</p>
 
                     <div class="row">
                         <div class="col-12 col-md-6 col-lg-4 mb-2">
@@ -21,7 +22,8 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Increment Date</span></div>
+                                <div class="input-group-prepend"><span class="input-group-text">Increment Date</span>
+                                </div>
                                 <input type="month" class="form-control @error('increment_date') is-invalid @enderror"
                                     wire:model.blur="increment_date" name="increment_date">
                                 <div class="input-group-append"></div>
@@ -32,7 +34,8 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Employment Type</span></div>
+                                <div class="input-group-prepend"><span class="input-group-text">Employment Type</span>
+                                </div>
                                 <select class="form-control @error('employment_type') is-invalid @enderror"
                                     wire:model.blur="employee_type" name="employee_type">
                                     <option value="">Employment Type</option>
@@ -48,7 +51,8 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Staff Category</span></div>
+                                <div class="input-group-prepend"><span class="input-group-text">Staff Category</span>
+                                </div>
                                 <select class="form-control @error('staff_category') is-invalid @enderror"
                                     wire:model.blur="staff_category" name="staff_category">
                                     <option value="">Staff Category</option>
@@ -67,7 +71,8 @@
                             @enderror
                             <div class="input-group form-group">
                                 <div class="input-group-prepend"><span class="input-group-text">Unit</span></div>
-                                <select class="form-control @error('unit') is-invalid @enderror" wire:model.blur="unit" name="unit">
+                                <select class="form-control @error('unit') is-invalid @enderror" wire:model.blur="unit"
+                                    name="unit">
                                     <option value="">Select Unit</option>
                                     @foreach ($units as $unit)
                                         <option value="{{ $unit->id }}">{{ $unit->name }}</option>
@@ -95,7 +100,8 @@
                         <div class="col-12 col-md-6 col-lg-4 mb-2">
                             <div class="input-group form-group">
                                 <div class="input-group-prepend"><span class="input-group-text">Status</span></div>
-                                <select class="form-control @error('status') is-invalid @enderror" wire:model.live="status">
+                                <select class="form-control @error('status') is-invalid @enderror"
+                                    wire:model.live="status">
                                     <option value="">Select Status</option>
                                     <option value="1">Active</option>
                                     <option value="2">Suspended</option>
@@ -117,26 +123,34 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="form-group">
-                                <label class="font-weight-bold text-dark">Select employees (grouped by grade level)</label>
-                                <div class="border rounded p-3" style="max-height: 500px; overflow-y: auto; background: #f8f9fa;">
+                                <label class="font-weight-bold text-dark">Select employees (grouped by grade
+                                    level)</label>
+                                <div class="border rounded p-3"
+                                    style="max-height: 500px; overflow-y: auto; background: #f8f9fa;">
                                     <div class="row">
                                         @forelse($specific_candidates as $groupName => $employees)
                                             <div class="col-md-4 mb-4">
                                                 <div class="card shadow-sm h-100 border-primary">
                                                     <div class="card-header bg-white py-2 border-bottom">
                                                         <div class="d-flex justify-content-between align-items-center">
-                                                            <h6 class="mb-0 font-weight-bold text-dark" style="font-size: 0.9rem;">{{ $groupName }}</h6>
+                                                            <h6 class="mb-0 font-weight-bold text-dark"
+                                                                style="font-size: 0.9rem;">{{ $groupName }}</h6>
                                                             <span class="badge badge-primary">{{ count($employees) }}</span>
                                                         </div>
                                                     </div>
                                                     <div class="card-body p-0">
-                                                        <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
+                                                        <div class="list-group list-group-flush"
+                                                            style="max-height: 250px; overflow-y: auto;">
                                                             @foreach ($employees as $emp)
-                                                                <label class="list-group-item list-group-item-action d-flex align-items-center px-3 py-2 mb-0 cursor-pointer">
-                                                                    <input type="checkbox" class="mr-3" value="{{ $emp->id }}" wire:model="specific_employee_ids">
+                                                                <label
+                                                                    class="list-group-item list-group-item-action d-flex align-items-center px-3 py-2 mb-0 cursor-pointer">
+                                                                    <input type="checkbox" class="mr-3" value="{{ $emp->id }}"
+                                                                        wire:model="specific_employee_ids">
                                                                     <div class="d-flex flex-column" style="line-height: 1.2;">
-                                                                        <span class="font-weight-bold text-dark" style="font-size: 0.85rem;">{{ $emp->full_name }}</span>
-                                                                        <small class="text-muted">{{ $emp->staff_number }}</small>
+                                                                        <span class="font-weight-bold text-dark"
+                                                                            style="font-size: 0.85rem;">{{ $emp->full_name }}</span>
+                                                                        <small
+                                                                            class="text-muted">{{ $emp->staff_number }}</small>
                                                                     </div>
                                                                 </label>
                                                             @endforeach
@@ -147,12 +161,14 @@
                                         @empty
                                             <div class="col-12 text-center py-5 text-muted">
                                                 <p class="mb-0">No employees match the current filters.</p>
-                                                <small>Adjust filters above or set Increment Date and Min. Service (Months) if using tenure.</small>
+                                                <small>Adjust filters above or set Increment Date and Min. Service (Months)
+                                                    if using tenure.</small>
                                             </div>
                                         @endforelse
                                     </div>
                                 </div>
-                                <small class="form-text text-muted mt-2">Check the boxes to select employees for increment.</small>
+                                <small class="form-text text-muted mt-2">Check the boxes to select employees for
+                                    increment.</small>
                             </div>
                         </div>
                     </div>
@@ -163,8 +179,10 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Min. Service (Months)</span></div>
-                                <input type="number" class="form-control @error('min_service_months') is-invalid @enderror"
+                                <div class="input-group-prepend"><span class="input-group-text">Min. Service
+                                        (Months)</span></div>
+                                <input type="number"
+                                    class="form-control @error('min_service_months') is-invalid @enderror"
                                     wire:model.blur="min_service_months" placeholder="e.g. 6">
                                 <div class="input-group-append"></div>
                             </div>
@@ -174,9 +192,12 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Increment by (Steps)</span></div>
-                                <input type="number" class="form-control @error('number_of_increment') is-invalid @enderror"
-                                    wire:model.blur="number_of_increment" name="increment" min="1" max="5" placeholder="1">
+                                <div class="input-group-prepend"><span class="input-group-text">Increment by
+                                        (Steps)</span></div>
+                                <input type="number"
+                                    class="form-control @error('number_of_increment') is-invalid @enderror"
+                                    wire:model.blur="number_of_increment" name="increment" min="1" max="5"
+                                    placeholder="1">
                                 <div class="input-group-append"><span class="input-group-text">Step(s)</span></div>
                             </div>
                         </div>
@@ -185,7 +206,8 @@
                                 <strong class="text-danger d-block form-text">{{ $message }}</strong>
                             @enderror
                             <div class="input-group form-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Arrears (Months)</span></div>
+                                <div class="input-group-prepend"><span class="input-group-text">Arrears (Months)</span>
+                                </div>
                                 <input type="number" class="form-control @error('arrears_months') is-invalid @enderror"
                                     wire:model.blur="arrears_months" min="0" placeholder="0">
                                 <div class="input-group-append"></div>
