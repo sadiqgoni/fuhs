@@ -184,9 +184,36 @@ class DeductionCalculation
             if ($activeBracket && $activeBracket->tax_brackets) {
 
                 // ── Annual figures ───────────────────────────────────────────
-                // We use ONLY basic salary as the gross base (per Excel logic)
+                // Annual basic salary
                 $annual_basic = round($basic_salary * 12, 2);
-                $annual_gross = $annual_basic;
+
+                // ── Sum taxable allowances (monthly), excluding A1 (Responsibility) ──
+                // A1 (Responsibility allowance) is non-taxable per policy.
+                $taxableAllowances = \App\Models\Allowance::leftJoin('salary_allowance_templates', 'salary_allowance_templates.allowance_id', 'allowances.id')
+                    ->select('salary_allowance_templates.*', 'allowances.taxable', 'allowances.status', 'allowances.allowance_name')
+                    ->where('allowances.taxable', 1)
+                    ->where('allowances.status', 1)
+                    ->where('allowances.code', '!=', 'A1')
+                    ->get();
+
+                $monthly_allowances = 0;
+                foreach ($taxableAllowances as $allowance) {
+                    try {
+                        if ($allowance->allowance_type == 1) {
+                            // Percentage of monthly basic
+                            $amt = round($basic_salary / 100 * $allowance->value, 2);
+                        } else {
+                            // Fixed amount
+                            $amt = round((float) $allowance->value, 2);
+                        }
+                        $monthly_allowances += $amt;
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+
+                // Annual gross = (monthly basic + monthly taxable allowances) × 12
+                $annual_gross = round(($basic_salary + $monthly_allowances) * 12, 2);
 
                 // ── Pull relief settings from DB ─────────────────────────────
                 // The client stores:
