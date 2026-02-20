@@ -366,7 +366,7 @@
                             @endcan
                             @can('allowance_template')
                                 <a class="dropdown-item" href="{{route('allowance.template')}}">Allowance template</a>
-                                <a class="dropdown-item" href="{{route('allowance.template.step')}}">Step allowance</a>
+                                <a class="dropdown-item" href="{{route('allowance.template.step')}}">Salary Allowance Table</a>
                             @endcan
                             @can('deduction_template')
                                 <a class="dropdown-item" href="{{route('deduction.template')}}">Deduction template</a>
@@ -376,7 +376,7 @@
                                 <a class="dropdown-item" href="{{route('salary.template')}}">Salary template</a>
                             @endcan
                             <a class="dropdown-item" href="{{route('tax-brackets.index')}}">
-                                <i class="fas fa-calculator"></i> Tax Brackets
+                                Paye Calculation Formula
                             </a>
 
                         </div>

@@ -81,7 +81,7 @@
                 <form wire:submit.prevent="update_grade">
                     <fieldset>
                         <legend>
-                            <h6 class="">Update Step Allowance (Grade {{ $edit_grade_level }})</h6>
+                            <h6 class="">Update Salary Allowance (Grade {{ $edit_grade_level }})</h6>
                         </legend>
                         <div class="form-group input-group">
                             <div class="input-group-prepend"><span class="input-group-text">Salary Structure</span></div>
@@ -133,7 +133,7 @@
                 </div>
                 <fieldset>
                     <legend>
-                        <h6>Import Step Matrix</h6>
+                        <h6>Import Salary Allowance Template</h6>
                     </legend>
 
                     <div class="row">
@@ -181,9 +181,9 @@
     @endif
 
     @section('title')
-        Step Allowance Template
+        SALARY ALLOWANCE TABLE
     @endsection
     @section('page_title')
-        Payroll Settings / Step Allowance Template
+        Payroll Settings / SALARY ALLOWANCE TABLE
     @endsection
 </div>
