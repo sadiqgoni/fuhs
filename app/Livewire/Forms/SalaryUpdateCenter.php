@@ -106,10 +106,9 @@ class SalaryUpdateCenter extends Component
 
         $this->salaryUpdate->save();
 
-        if (!$this->salary_arears || !$this->salary_deduction) {
-            $this->salary_arears = 0.00;
-            $this->salary_deduction = 0.00;
-        }
+        // Only default to 0 if genuinely null/unset — never overwrite a real entered value
+        $this->salary_arears = $this->salary_arears ?? 0.00;
+        $this->salary_deduction = $this->salary_deduction ?? 0.00;
         $salary_update = $this->salary;
 
 
