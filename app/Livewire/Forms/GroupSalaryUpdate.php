@@ -142,8 +142,10 @@ class GroupSalaryUpdate extends Component
                 if ($this->update_allow_deduct == 2 && $this->selected_allow_deduct == 1 && $this->paye_calculation != 1) {
 
                     $paye = app(DeductionCalculation::class);
-                    // Use dynamic tax calculation system
-                    $this->amount = $paye->compute_tax($salary_update->basic_salary);
+                    // Pass actual taxable allowances: total allowance minus A1 (Responsibility = non-taxable)
+                    $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                    $taxable_allowances = max(0, round(($salary_update->total_allowance ?? 0) - $a1_amount, 2));
+                    $this->amount = $paye->compute_tax($salary_update->basic_salary, $taxable_allowances);
                     $salary_update["D$this->selected_allow_deduct"] = $this->amount;
                     $salary_update->save();
                 } elseif (($this->update_allow_deduct == 2 || $this->update_allow_deduct == 3)) {
@@ -312,8 +314,10 @@ class GroupSalaryUpdate extends Component
                         //deductions
                         if ($this->selected_allow_deduct == 1) {
                             $paye = app(DeductionCalculation::class);
-                            // Use dynamic tax calculation system
-                            $this->amount = $paye->compute_tax($salary_update->basic_salary);
+                            // Pass actual taxable allowances: total allowance minus A1 (Responsibility = non-taxable)
+                            $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                            $taxable_allowances = max(0, round(($salary_update->total_allowance ?? 0) - $a1_amount, 2));
+                            $this->amount = $paye->compute_tax($salary_update->basic_salary, $taxable_allowances);
                         } elseif (($this->selected_allow_deduct == 2 || $this->selected_allow_deduct == 3)) {
 
                             if ($employee->pfa_name == 10) {

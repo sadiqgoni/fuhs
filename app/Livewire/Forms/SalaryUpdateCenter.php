@@ -439,8 +439,10 @@ class SalaryUpdateCenter extends Component
             foreach (Deduction::where('status', 1)->get() as $deduction) {
                 if ($deduction->id == 1) {
                     $paye = app(DeductionCalculation::class);
-                    // Use dynamic tax calculation system (already configured to ignore allowances/NHIS for base)
-                    $amount = $paye->compute_tax($basic_salary);
+                    // Pass actual taxable allowances for this employee (total minus A1 = Responsibility, which is non-taxable)
+                    $a1_amount = round((float) ($salary->A1 ?? 0), 2);
+                    $taxable_allowances = max(0, round($allow_total - $a1_amount, 2));
+                    $amount = $paye->compute_tax($basic_salary, $taxable_allowances);
                 } else {
                     $dedTemp = SalaryDeductionTemplate::where('salary_structure_id', $emp->salary_structure)
                         ->whereRaw('? between grade_level_from and grade_level_to', [$emp->grade_level])
@@ -460,8 +462,10 @@ class SalaryUpdateCenter extends Component
                         }
                         //check union
                         elseif (UnionDeduction::where('deduction_id', $dedTemp->deduction_id)->exists()) {
-                            if (!UnionDeduction::where('deduction_id', $dedTemp->deduction_id)
-                                ->where('union_id', $emp->staff_union)->exists()) {
+                            if (
+                                !UnionDeduction::where('deduction_id', $dedTemp->deduction_id)
+                                    ->where('union_id', $emp->staff_union)->exists()
+                            ) {
                                 $amount = 0.00;
                             }
                         }

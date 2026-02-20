@@ -175,7 +175,7 @@ class DeductionCalculation
 
     }
 
-    public function compute_tax($basic_salary)
+    public function compute_tax($basic_salary, $monthly_taxable_allowances = 0.0)
     {
         // Try to use dynamic tax bracket first
         try {
@@ -187,33 +187,10 @@ class DeductionCalculation
                 // Annual basic salary
                 $annual_basic = round($basic_salary * 12, 2);
 
-                // ── Sum taxable allowances (monthly), excluding A1 (Responsibility) ──
-                // A1 (Responsibility allowance) is non-taxable per policy.
-                $taxableAllowances = \App\Models\Allowance::leftJoin('salary_allowance_templates', 'salary_allowance_templates.allowance_id', 'allowances.id')
-                    ->select('salary_allowance_templates.*', 'allowances.taxable', 'allowances.status', 'allowances.allowance_name')
-                    ->where('allowances.taxable', 1)
-                    ->where('allowances.status', 1)
-                    ->where('allowances.code', '!=', 'A1')
-                    ->get();
-
-                $monthly_allowances = 0;
-                foreach ($taxableAllowances as $allowance) {
-                    try {
-                        if ($allowance->allowance_type == 1) {
-                            // Percentage of monthly basic
-                            $amt = round($basic_salary / 100 * $allowance->value, 2);
-                        } else {
-                            // Fixed amount
-                            $amt = round((float) $allowance->value, 2);
-                        }
-                        $monthly_allowances += $amt;
-                    } catch (\Exception $e) {
-                        continue;
-                    }
-                }
-
                 // Annual gross = (monthly basic + monthly taxable allowances) × 12
-                $annual_gross = round(($basic_salary + $monthly_allowances) * 12, 2);
+                // Caller must pass in the actual taxable allowances already computed
+                // for this specific employee (excluding A1 / Responsibility).
+                $annual_gross = round(($basic_salary + $monthly_taxable_allowances) * 12, 2);
 
                 // ── Pull relief settings from DB ─────────────────────────────
                 // The client stores:
@@ -263,6 +240,9 @@ class DeductionCalculation
         // Fallback: hardcoded CRA = ₦200,000 + 20% Gross, Pension 8%, NHF 2.5%
         return $this->paye_calculation1($basic_salary, 1);
     }
+
+
+
 
     /**
      * Legacy tax calculation method (old hardcoded brackets)
