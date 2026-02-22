@@ -491,8 +491,9 @@ class EmployeeProfile extends Component
                 foreach (Deduction::where('status', 1)->get() as $deduction) {
                     if ($deduction->id == 1) {
                         $paye = app(DeductionCalculation::class);
-                        // Use dynamic tax calculation system
-                        $amount = $paye->compute_tax($basic_salary);
+                        $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                        $taxable_allowances = max(0, round($total_allow - $a1_amount, 2));
+                        $amount = $paye->compute_tax($basic_salary, $taxable_allowances);
 
                     } else {
 
@@ -573,8 +574,9 @@ class EmployeeProfile extends Component
                     $default_statutory_calculation = app_settings()->statutory_deduction;
                     if ($deduction->id == 1) {
                         $paye = app(DeductionCalculation::class);
-                        // Use dynamic tax calculation system
-                        $amount = $paye->compute_tax($basic_salary);
+                        $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                        $taxable_allowances = max(0, round($total_allow - $a1_amount, 2));
+                        $amount = $paye->compute_tax($basic_salary, $taxable_allowances);
 
                     } else {
                         $amount = 0.00;

@@ -39,12 +39,12 @@ class SalaryUpdateCenter extends Component
     public $bulkResetInProgress = false;
 
     protected $rules = [
-        'salary_arears' => 'nullable|regex:/^\d*(\.\d{2})?$/',
-        'salary_deduction' => ['regex:/^\d{1,2}(\.\d{1,2})?$|^100(\.00?)?$/'],
+        'salary_arears' => 'nullable|numeric|regex:/^-?\d*(\.\d{1,2})?$/',
+        'salary_deduction' => ['nullable', 'numeric', 'regex:/^-?\d*(\.\d{1,2})?$/'],
     ];
     protected $messages = [
-        'salary_arears.regex' => '',
-        'salary_deduction.regex' => ''
+        'salary_arears.regex' => 'Must be a valid number with at most 2 decimal places',
+        'salary_deduction.regex' => 'Must be a valid number with at most 2 decimal places'
     ];
 
     public function getListeners()
@@ -66,16 +66,21 @@ class SalaryUpdateCenter extends Component
 
     public function confirm($id)
     {
-        $this->validate();
-        $rules = [];
-        foreach ($this->fieldNames as $field => $name) {
-            $rules["inputs.$field"] = 'required|numeric|regex:/^\d+(\.\d{1,2})?$/';
-        }
-        foreach ($this->deductionNames as $field => $name) {
-            $rules["fields.$field"] = 'required|numeric|regex:/^\d+(\.\d{1,2})?$/';
-        }
+        try {
+            $this->validate();
+            $rules = [];
+            foreach ($this->fieldNames as $field => $name) {
+                $rules["inputs.$field"] = 'required|numeric|regex:/^-?\d*(\.\d{1,2})?$/';
+            }
+            foreach ($this->deductionNames as $field => $name) {
+                $rules["fields.$field"] = 'required|numeric|regex:/^-?\d*(\.\d{1,2})?$/';
+            }
 
-        $this->validate($rules, $this->customMessages());
+            $this->validate($rules, $this->customMessages());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->alert('error', 'Validation failed! Please check the form fields for errors.', ['timer' => 5000]);
+            throw $e;
+        }
 
         $this->si = $id;
         $this->alert('warning', 'Are you sure you want to apply changes?', [
@@ -259,7 +264,7 @@ class SalaryUpdateCenter extends Component
     public function updatedInputs($value, $key)
     {
         $this->validateOnly("inputs.$key", [
-            "inputs.$key" => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/',
+            "inputs.$key" => 'required|numeric|regex:/^-?\d*(\.\d{1,2})?$/',
         ], $this->customMessages());
 
     }
@@ -270,7 +275,7 @@ class SalaryUpdateCenter extends Component
             return;
         }
         $this->validateOnly("fields.$key", [
-            "fields.$key" => 'required|numeric|regex:/^\d+(\.\d{1,2})?$/',
+            "fields.$key" => 'required|numeric|regex:/^-?\d*(\.\d{1,2})?$/',
         ], $this->customMessages());
     }
 
@@ -280,10 +285,10 @@ class SalaryUpdateCenter extends Component
     {
         $this->validate(
             [
-                'salary_deduction' => ['regex:/^\d{1,2}(\.\d{1,2})?$|^100(\.00?)?$/'],
+                'salary_deduction' => ['nullable', 'numeric', 'regex:/^-?\d*(\.\d{1,2})?$/'],
             ],
             [
-                'regex' => "Invalid percentage range"
+                'regex' => "Invalid percentage format"
             ]
         );
         $total_earning = round($this->salary->basic_salary + $this->salary->total_allowance + $this->salary_arears, 2);
@@ -419,6 +424,11 @@ class SalaryUpdateCenter extends Component
                 ->get()
                 ->keyBy('allowance_id');
 
+            // Zero out prev allowances
+            foreach (\App\Models\Allowance::where('status', 1)->get() as $alw) {
+                $salary["A{$alw->id}"] = 0;
+            }
+
             $allow_total = 0;
             foreach ($allow_temp as $item) {
                 if (isset($stepAllowances[$item->allowance_id])) {
@@ -432,6 +442,11 @@ class SalaryUpdateCenter extends Component
                 }
                 $salary["A$item->allowance_id"] = $amount;
                 $allow_total += round($amount, 2);
+            }
+
+            // Zero out prev deductions
+            foreach (\App\Models\Deduction::where('status', 1)->get() as $ddc) {
+                $salary["D{$ddc->id}"] = 0;
             }
 
             $deduct_total = 0;
@@ -513,9 +528,9 @@ class SalaryUpdateCenter extends Component
             $messages["inputs.$field.regex"] = "$name must have at most 2 decimal places.";
         }
         foreach ($this->deductionNames as $field => $name) {
-            $messages["deductionInputs.$field.required"] = "$name is required.";
-            $messages["deductionInputs.$field.numeric"] = "$name must be a number.";
-            $messages["deductionInputs.$field.regex"] = "$name must have at most 2 decimal places.";
+            $messages["fields.$field.required"] = "$name is required.";
+            $messages["fields.$field.numeric"] = "$name must be a number.";
+            $messages["fields.$field.regex"] = "$name must have at most 2 decimal places.";
         }
         return $messages;
     }

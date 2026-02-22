@@ -397,12 +397,12 @@
                             @endphp
                             {{round($total_sum)}}%
                             {{-- <progress id="file" value="{{$total_sum }}" max="{{$gross}}" --}} {{-- style="border:none;border-radius:25px;height: 50px;width: 100%;--}}
-                            {{--                                      @if($total_sum <= 33)--}}
-                            {{--                                background:greenyellow !important;--}}
-                            {{--                            @else--}}
-                            {{--                                background:rosybrown !important;--}}
-                            {{--                            @endif--}}
-                            {{--                                ">--}}
+                                {{--                                      @if($total_sum <= 33)--}}
+                                {{--                                background:greenyellow !important;--}}
+                                {{--                            @else--}}
+                                {{--                                background:rosybrown !important;--}}
+                                {{--                            @endif--}}
+                                {{--                                ">--}}
                                 {{-- </progress>--}}
                             <div class="progress bg-success" style="height: 50px">
                                 <div class="progress-bar bg-warning" role="progressbar"
@@ -420,62 +420,99 @@
                     </div>
 
                     {{-- //allowance deduction--}}
-                    {{-- @if ($errors->any())--}}
-                    {{-- <div class="alert alert-danger">--}}
-                        {{-- <ul>--}}
-                            {{-- @foreach ($errors->all() as $error)--}}
-                            {{-- <li>{{ $error }}</li>--}}
-                            {{-- @endforeach--}}
-                            {{-- </ul>--}}
-                        {{-- </div>--}}
-                    {{-- @endif--}}
-                    <div class="row" style="">
-
-                        <div class="col-12">
-                            <div class="vertical-tas mt-2" style="overflow-y: auto !important;overflow-x: hidden">
-                                <ul class="nav nav-tabs" role="tablist">
-                                    <li class="nav-item">
-                                        <a wire:ignore class="nav-link active" data-toggle="tab" href="#home-v" role="tab"
-                                            aria-controls="home">Allowances</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a wire:ignore class="nav-link" data-toggle="tab" href="#profile-v" role="tab"
-                                            aria-controls="profile">Deductions</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a wire:ignore class="nav-link" data-toggle="tab" href="#messages-v" role="tab"
-                                            aria-controls="messages">More Deductions</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a wire:ignore class="nav-link" data-toggle="tab" href="#settings-v" role="tab"
-                                            aria-controls="messages">More Deductions</a>
-                                    </li>
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
                                 </ul>
-                                <div class="tab-content">
-                                    <div wire:ignore.self class="tab-pane active" id="home-v" role="tabpanel">
-                                        <div class="sv-tab-pane pt-3">
-                                            <div class="row">
+                            </div>
+                    @endif
+                        <div class="row" style="">
 
-                                                @forelse ($allow as $allowance)
-                                                    @php $field = 'A' . $allowance->id; @endphp
-                                                    <div class="col-12 col-md-4 col-lg-3">
+                            <div class="col-12">
+                                <div class="vertical-tas mt-2" style="overflow-y: auto !important;overflow-x: hidden">
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li class="nav-item">
+                                            <a wire:ignore class="nav-link active" data-toggle="tab" href="#home-v" role="tab"
+                                                aria-controls="home">Allowances</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a wire:ignore class="nav-link" data-toggle="tab" href="#profile-v" role="tab"
+                                                aria-controls="profile">Deductions</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a wire:ignore class="nav-link" data-toggle="tab" href="#messages-v" role="tab"
+                                                aria-controls="messages">More Deductions</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a wire:ignore class="nav-link" data-toggle="tab" href="#settings-v" role="tab"
+                                                aria-controls="messages">More Deductions</a>
+                                        </li>
+                                    </ul>
+                                    <div class="tab-content">
+                                        <div wire:ignore.self class="tab-pane active" id="home-v" role="tabpanel">
+                                            <div class="sv-tab-pane pt-3">
+                                                <div class="row">
+
+                                                    @forelse ($allow as $allowance)
+                                                        @php $field = 'A' . $allowance->id; @endphp
+                                                        <div class="col-12 col-md-4 col-lg-3">
+                                                            <div class="input-group form-group">
+                                                                @error('inputs.' . $field)
+                                                                    <div class="text-danger text-sm">{{ $message }}</div>
+                                                                @enderror
+                                                                <div class="input-group-prepend"><span class="input-group-text"
+                                                                        style="font-size: 12px;border: none">
+                                                                        {{ $allowance->allowance_name }}</span>
+                                                                </div>
+                                                                <input type="text" wire:model.lazy="inputs.{{ $field }}"
+                                                                    class="form-control @error('inputs.' . $field) is-invalid  @enderror"
+                                                                    placeholder="Enter amount (e.g. 1234.56)">
+                                                                <div class="input-group-append">
+                                                                    @if($allowance->allowance_type == 1)
+                                                                        <Button wire:click.prevent="resetSingle({{$allowance->id}})"
+                                                                            style="font-size: 10px" class="border-0 btn">Reset</Button>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @empty
+
+                                                    @endforelse
+
+                                                </div>
+
+
+                                            </div>
+
+                                        </div>
+
+                                        <div wire:ignore.self class="tab-pane" id="profile-v" role="tabpanel">
+                                            <div class="row py-4">
+
+                                                @forelse($deduct->take(12) as $deduction)
+                                                    @php $field = 'D' . $deduction->id; @endphp
+                                                    <div class="col-12 col-md-4 col-lg-3 ">
+                                                        @error('fields.' . $field)
+                                                            <div class="text-danger text-sm">{{ $message }}</div>
+                                                        @enderror
                                                         <div class="input-group form-group">
-                                                            @error('inputs.' . $field)
-                                                                <div class="text-danger text-sm">{{ $message }}</div>
-                                                            @enderror
                                                             <div class="input-group-prepend"><span class="input-group-text"
-                                                                    style="font-size: 12px;border: none">
-                                                                    {{ $allowance->allowance_name }}</span>
+                                                                    style="font-size: 12px">{{$deduction->deduction_name}}</span>
                                                             </div>
-                                                            <input type="text" wire:model.lazy="inputs.{{ $field }}"
-                                                                class="form-control @error('inputs.' . $field) is-invalid  @enderror"
-                                                                placeholder="Enter amount (e.g. 1234.56)">
-                                                            <div class="input-group-append">
-                                                                @if($allowance->allowance_type == 1)
-                                                                    <Button wire:click.prevent="resetSingle({{$allowance->id}})"
-                                                                        style="font-size: 10px" class="border-0 btn">Reset</Button>
-                                                                @endif
-                                                            </div>
+                                                            <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
+                                                                wire:model.lazy="fields.{{ $field }}"
+                                                                class="form-control @error('fields.' . $field) is-invalid  @enderror"
+                                                                placeholder="Enter amount (e.g. 123.56)">
+                                                            {{-- <div class="input-group-append">--}}
+                                                                {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
+                                                                {{-- --}}{{-- <Button
+                                                                    wire:click.prevent="resetDeductSingle({{$deduction->id}})"
+                                                                    style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
+                                                                {{-- --}}{{-- @endif--}}
+                                                                {{-- </div>--}}
                                                         </div>
                                                     </div>
                                                 @empty
@@ -483,115 +520,78 @@
                                                 @endforelse
 
                                             </div>
-
-
                                         </div>
-
-                                    </div>
-
-                                    <div wire:ignore.self class="tab-pane" id="profile-v" role="tabpanel">
-                                        <div class="row py-4">
-
-                                            @forelse($deduct->take(12) as $deduction)
-                                                @php $field = 'D' . $deduction->id; @endphp
-                                                <div class="col-12 col-md-4 col-lg-3 ">
-                                                    @error('fields.' . $field)
-                                                        <div class="text-danger text-sm">{{ $message }}</div>
-                                                    @enderror
-                                                    <div class="input-group form-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text"
-                                                                style="font-size: 12px">{{$deduction->deduction_name}}</span>
+                                        <div wire:ignore.self class="tab-pane" id="messages-v" role="tabpanel">
+                                            <div class="row py-4">
+                                                @forelse($deduct->slice('12') as $deduction)
+                                                    @php $field = 'D' . $deduction->id; @endphp
+                                                    <div class="col-12 col-md-4 col-lg-3 ">
+                                                        @error('fields.' . $field)
+                                                            <div class="text-danger text-sm">{{ $message }}</div>
+                                                        @enderror
+                                                        <div class="input-group form-group">
+                                                            <div class="input-group-prepend"><span class="input-group-text"
+                                                                    style="font-size: 12px">{{$deduction->deduction_name}}</span>
+                                                            </div>
+                                                            <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
+                                                                wire:model.lazy="fields.{{ $field }}"
+                                                                class="form-control @error('fields.' . $field) is-invalid  @enderror"
+                                                                placeholder="Enter amount (e.g. 123.56)">
+                                                            {{-- <div class="input-group-append">--}}
+                                                                {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
+                                                                {{-- --}}{{-- <Button
+                                                                    wire:click.prevent="resetDeductSingle({{$deduction->id}})"
+                                                                    style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
+                                                                {{-- --}}{{-- @endif--}}
+                                                                {{-- </div>--}}
                                                         </div>
-                                                        <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
-                                                            wire:model.lazy="fields.{{ $field }}"
-                                                            class="form-control @error('fields.' . $field) is-invalid  @enderror"
-                                                            placeholder="Enter amount (e.g. 123.56)">
-                                                        {{-- <div class="input-group-append">--}}
-                                                            {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
-                                                            {{-- --}}{{-- <Button
-                                                                wire:click.prevent="resetDeductSingle({{$deduction->id}})"
-                                                                style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
-                                                            {{-- --}}{{-- @endif--}}
-                                                            {{-- </div>--}}
                                                     </div>
-                                                </div>
-                                            @empty
+                                                @empty
 
-                                            @endforelse
-
+                                                @endforelse
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div wire:ignore.self class="tab-pane" id="messages-v" role="tabpanel">
-                                        <div class="row py-4">
-                                            @forelse($deduct->slice('12') as $deduction)
-                                                @php $field = 'D' . $deduction->id; @endphp
-                                                <div class="col-12 col-md-4 col-lg-3 ">
-                                                    @error('fields.' . $field)
-                                                        <div class="text-danger text-sm">{{ $message }}</div>
-                                                    @enderror
-                                                    <div class="input-group form-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text"
-                                                                style="font-size: 12px">{{$deduction->deduction_name}}</span>
+                                        <div wire:ignore.self class="tab-pane" id="settings-v" role="tabpanel">
+                                            <div class="row py-4">
+                                                @forelse($deduct->slice('24') as $deduction)
+                                                    @php $field = 'D' . $deduction->id; @endphp
+                                                    <div class="col-12 col-md-4 col-lg-3 ">
+                                                        @error('fields.' . $field)
+                                                            <div class="text-danger text-sm">{{ $message }}</div>
+                                                        @enderror
+                                                        <div class="input-group form-group">
+                                                            <div class="input-group-prepend"><span class="input-group-text"
+                                                                    style="font-size: 12px">{{$deduction->deduction_name}}</span>
+                                                            </div>
+                                                            <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
+                                                                wire:model.lazy="fields.{{ $field }}"
+                                                                class="form-control @error('fields.' . $field) is-invalid  @enderror"
+                                                                placeholder="Enter amount (e.g. 123.56)">
+                                                            {{-- <div class="input-group-append">--}}
+                                                                {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
+                                                                {{-- --}}{{-- <Button
+                                                                    wire:click.prevent="resetDeductSingle({{$deduction->id}})"
+                                                                    style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
+                                                                {{-- --}}{{-- @endif--}}
+                                                                {{-- </div>--}}
                                                         </div>
-                                                        <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
-                                                            wire:model.lazy="fields.{{ $field }}"
-                                                            class="form-control @error('fields.' . $field) is-invalid  @enderror"
-                                                            placeholder="Enter amount (e.g. 123.56)">
-                                                        {{-- <div class="input-group-append">--}}
-                                                            {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
-                                                            {{-- --}}{{-- <Button
-                                                                wire:click.prevent="resetDeductSingle({{$deduction->id}})"
-                                                                style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
-                                                            {{-- --}}{{-- @endif--}}
-                                                            {{-- </div>--}}
                                                     </div>
-                                                </div>
-                                            @empty
+                                                @empty
 
-                                            @endforelse
-                                        </div>
-                                    </div>
-                                    <div wire:ignore.self class="tab-pane" id="settings-v" role="tabpanel">
-                                        <div class="row py-4">
-                                            @forelse($deduct->slice('24') as $deduction)
-                                                @php $field = 'D' . $deduction->id; @endphp
-                                                <div class="col-12 col-md-4 col-lg-3 ">
-                                                    @error('fields.' . $field)
-                                                        <div class="text-danger text-sm">{{ $message }}</div>
-                                                    @enderror
-                                                    <div class="input-group form-group">
-                                                        <div class="input-group-prepend"><span class="input-group-text"
-                                                                style="font-size: 12px">{{$deduction->deduction_name}}</span>
-                                                        </div>
-                                                        <input @if($deduction->id == 5) {{$disabled}} @endif type="text"
-                                                            wire:model.lazy="fields.{{ $field }}"
-                                                            class="form-control @error('fields.' . $field) is-invalid  @enderror"
-                                                            placeholder="Enter amount (e.g. 123.56)">
-                                                        {{-- <div class="input-group-append">--}}
-                                                            {{-- --}}{{-- @if($deduction->deduction_type==1)--}}
-                                                            {{-- --}}{{-- <Button
-                                                                wire:click.prevent="resetDeductSingle({{$deduction->id}})"
-                                                                style="font-size: 10px" class="border-0 btn">Reset</Button>--}}
-                                                            {{-- --}}{{-- @endif--}}
-                                                            {{-- </div>--}}
-                                                    </div>
-                                                </div>
-                                            @empty
-
-                                            @endforelse
+                                                @endforelse
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
 
                         </div>
 
-                    </div>
 
-
-                </form>
+                    </form>
+                </div>
             </div>
-        </div>
     @endif
 
 

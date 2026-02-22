@@ -6,7 +6,9 @@
 </style>
 
         <?php
-        $allowances = \App\Models\Allowance::where('status', 1)->get();
+        $allowances = \App\Models\Allowance::where('status', 1)
+            ->whereNotIn('id', [9, 10]) // Remove duplicate arrears allowances (since they are printed manually)
+            ->get();
         $deductions = \App\Models\Deduction::where('status', 1)->get();
         ?>
         

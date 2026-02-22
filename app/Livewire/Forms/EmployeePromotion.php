@@ -252,8 +252,9 @@ class EmployeePromotion extends Component
                                 $paye = app(DeductionCalculation::class);
                                 $default_paye_calculation = app_settings()->paye_calculation;
                                 $default_statutory_calculation = app_settings()->statutory_deduction;
-                                // Use dynamic tax calculation system
-                                $amount = $paye->compute_tax($basic_salary);
+                                $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                                $taxable_allowances = max(0, round($total_allow - $a1_amount, 2));
+                                $amount = $paye->compute_tax($basic_salary, $taxable_allowances);
 
                             } else {
 
@@ -397,7 +398,9 @@ class EmployeePromotion extends Component
         foreach (Deduction::where('status', 1)->get() as $deduction) {
             if ($deduction->id == 1) {
                 $paye = app(DeductionCalculation::class);
-                $amount = $paye->compute_tax($basic_salary);
+                $a1_amount = round((float) ($salary_update->A1 ?? 0), 2);
+                $taxable_allowances = max(0, round($total_allow - $a1_amount, 2));
+                $amount = $paye->compute_tax($basic_salary, $taxable_allowances);
             } else {
                 $dedTemp = SalaryDeductionTemplate::where('salary_structure_id', $old_ss)
                     ->whereRaw('? between grade_level_from and grade_level_to', [$old_level])

@@ -75,11 +75,12 @@ $allowance = App\Models\Allowance::all();
                                                             <table   style="width: 75%;margin-left: 3%;font-size: 13px !important;" >
 
                                                                 @php
-                                                                    $step = \App\Models\EmployeeProfile::where('staff_number', $paySlip->pf_number)->first()->step;
-                                                                @endphp
+                                                                    $empProfile = \App\Models\EmployeeProfile::where('staff_number', $paySlip->pf_number)->first();
+                                                                    $step = $empProfile ? $empProfile->step : $paySlip->step;
 
-                                                                @php
-                                                                    $allowances = \App\Models\Allowance::where('status', 1)->get();
+                                                                    $allowances = \App\Models\Allowance::where('status', 1)
+                                                                        ->whereNotIn('id', [9, 10]) // Omit duplicate arrears
+                                                                        ->get();
                                                                     $deductions = \App\Models\Deduction::where('status', 1)->get();
                                                                 @endphp
 
