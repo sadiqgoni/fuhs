@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class SalaryJob implements ShouldQueue
@@ -28,6 +29,11 @@ class SalaryJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Excel::import(new SalaryTemplate($this->uploadFile['salary']), $this->uploadFile['import']);
+        DB::transaction(function () {
+            $salaryStructureId = $this->uploadFile['salary'];
+
+            \App\Models\SalaryStructureTemplate::where('salary_structure_id', $salaryStructureId)->delete();
+            Excel::import(new SalaryTemplate($salaryStructureId), $this->uploadFile['import']);
+        });
     }
 }

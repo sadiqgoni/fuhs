@@ -177,6 +177,14 @@
                       </select>
                   </div>
                   <legend><h6>Import Salary Structure Template</h6></legend>
+                  <div class="mb-2">
+                      <a href="{{url('assets/excel_sample/salary_templates/salary_template_conuass.xlsx')}}" class="d-block text-danger">
+                          Download CONUASS salary template sample
+                      </a>
+                      <a href="{{url('assets/excel_sample/salary_templates/salary_template_contiss_ii.xlsx')}}" class="d-block text-danger">
+                          Download CONTISS II salary template sample
+                      </a>
+                  </div>
                   <label for="">Chose template file</label>
                   <input type="file" id="upload{{ $iteration }}"  class="form-control-sm" wire:model.live="importFile">
                   @error('importFile')
